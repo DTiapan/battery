@@ -2,13 +2,23 @@ import hashlib
 import struct
 from datetime import datetime, timezone
 from pathlib import Path
+import sys
 from typing import Any, Dict, List, Optional
-import sqlite_vec
 
-try:
-    import pysqlite3 as sqlite3
-except ImportError:
+# Ensure sqlite3 with extension loading support is available across platforms
+sqlite3 = None
+for _mod in ("pysqlite3", "sqlean"):
+    try:
+        sqlite3 = __import__(_mod)
+        sys.modules["sqlite3"] = sqlite3
+        break
+    except ImportError:
+        pass
+
+if sqlite3 is None:
     import sqlite3
+
+import sqlite_vec
 
 from battery.config import DEFAULT_DB_PATH, EMBEDDING_DIM
 

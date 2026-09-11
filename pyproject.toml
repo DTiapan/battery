@@ -12,6 +12,7 @@ dependencies = [
     "mcp>=2.2.0",
     "pysqlite3-binary>=0.5.4.post2 ; sys_platform == 'linux'",
     "rich>=15.0.0",
+    "sqlean-py>=3.50.4.5 ; sys_platform != 'linux'",
     "sqlite-vec>=0.1.9",
     "typer>=0.27.2",
 ]
