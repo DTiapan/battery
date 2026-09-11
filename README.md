@@ -133,7 +133,11 @@ Relying exclusively on dense vector search is one of the most common failure mod
 #### The Solution: Reciprocal Rank Fusion (RRF)
 Battery runs both searches simultaneously against SQLite and fuses the ranked lists using Reciprocal Rank Fusion ($k=60$):
 
-$$\text{RRF\_Score}(d) = \frac{w_{\text{text}}}{60 + \text{rank}_{\text{bm25}}(d)} + \frac{w_{\text{vec}}}{60 + \text{rank}_{\text{vec}}(d)}$$
+$$\text{RRF}(d) = \frac{w_{\text{text}}}{60 + r_{\text{bm25}}(d)} + \frac{w_{\text{vec}}}{60 + r_{\text{vec}}(d)}$$
+
+```text
+RRF_Score(d) = (w_text / (60 + rank_bm25(d))) + (w_vec / (60 + rank_vec(d)))
+```
 
 Where $w_{\text{text}} = 0.5$ and $w_{\text{vec}} = 0.5$. This guarantees that exact code tokens surface to Rank #1, while conceptual queries still achieve maximum recall.
 
@@ -339,6 +343,21 @@ I build and evaluate production-style AI systems, with a focus on AI agents, eva
 * **Weekly Newsletter — Grow with AI:** [growithai.substack.com](https://growithai.substack.com/)
 * **YouTube — Grow with AI:** [youtube.com/@grow_with_ai_now](https://www.youtube.com/@grow_with_ai_now)
 * **Email:** [bakran.ajas@gmail.com](mailto:bakran.ajas@gmail.com)
+* **LinkedIn:** [linkedin.com/in/ajasbakran](https://linkedin.com/in/ajasbakran)
+
+---
+
+## 🤝 Work With Me — Advisory & Technical Consulting
+
+I advise high-growth engineering teams and consult on **production-grade AI systems, agent evaluation, and reliability infrastructure**.
+
+### Areas of Engagement:
+* **AI Agent Reliability & Evaluation:** Building regression test harnesses, trajectory-based evaluation suites, tool-calling validation, and LLM-as-a-judge scoring frameworks to make agentic workflows measurable, observable, and dependable.
+* **Context Engineering & Memory Architectures:** Designing high-performance local context substrates, multi-agent context synchronization, hybrid search ranking, and MCP tool protocols.
+* **Production AI Readiness & Safety:** Red-teaming, prompt injection resilience, failure taxonomy analysis, and latency optimization for enterprise deployment.
+* **Fractional AI Systems Architect / Technical Advisory:** Strategic architectural guidance for engineering leadership building complex LLM and multi-agent platforms.
+
+> **Let's Connect:** Reach out directly via [LinkedIn](https://linkedin.com/in/ajasbakran) or email at [bakran.ajas@gmail.com](mailto:bakran.ajas@gmail.com) with details on your team's goals.
 
 ---
 
