@@ -327,11 +327,23 @@ def evaluate(
     dataset_path: Optional[Path] = typer.Option(
         None, "--dataset", "-d", help="Custom evaluation dataset JSON path"
     ),
+    stress: bool = typer.Option(
+        False, "--stress", "-s", help="Run scaled stress benchmark (up to 500 items under load)"
+    ),
+    scale: int = typer.Option(
+        500, "--scale", help="Scale factor for stress benchmark (default: 500)"
+    ),
     markdown: bool = typer.Option(
-        True, "--markdown/--no-markdown", help="Generate evals/benchmark_results.md"
+        True, "--markdown/--no-markdown", help="Generate Markdown evaluation report"
     ),
 ):
-    """Runs the retrieval evaluation benchmark comparing BM25, Vector, and Hybrid RRF."""
+    """Runs retrieval evaluation benchmarks comparing BM25, Vector, and Hybrid RRF."""
+    if stress:
+        from battery.evals.stress_test import run_stress_benchmark
+
+        run_stress_benchmark(scale=scale, output_markdown=markdown)
+        return
+
     from battery.evals.harness import load_dataset, run_evaluation
 
     dataset = load_dataset(dataset_path) if dataset_path else None

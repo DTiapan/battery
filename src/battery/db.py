@@ -176,6 +176,65 @@ def insert_memory(
         }
 
 
+def insert_memories_batch(
+    conn: sqlite3.Connection,
+    items: List[Dict[str, Any]],
+) -> int:
+    """Inserts a batch of memories and embeddings in a single atomic SQLite transaction."""
+    if not items:
+        return 0
+
+    now = datetime.now(timezone.utc).isoformat()
+    inserted_count = 0
+
+    with conn:
+        for item in items:
+            content_clean = item["content"].strip()
+            c_hash = hash_content(content_clean)
+            category = item.get("category", "general")
+            importance = item.get("importance", 1.0)
+            embedding = item.get("embedding")
+
+            cursor = conn.execute(
+                "SELECT id, is_deleted FROM memories WHERE content_hash = ?", (c_hash,)
+            )
+            existing = cursor.fetchone()
+
+            if existing:
+                memory_id = existing["id"]
+                if existing["is_deleted"]:
+                    conn.execute(
+                        "UPDATE memories SET is_deleted = 0, category = ?, importance = ?, updated_at = ? WHERE id = ?",
+                        (category, importance, now, memory_id),
+                    )
+                    if embedding:
+                        vec_bytes = serialize_vector(embedding)
+                        conn.execute(
+                            "INSERT OR REPLACE INTO vec_memories(memory_id, embedding) VALUES (?, ?)",
+                            (memory_id, vec_bytes),
+                        )
+                    inserted_count += 1
+                continue
+
+            cursor = conn.execute(
+                """
+                INSERT INTO memories(content_hash, content, category, importance, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (c_hash, content_clean, category, importance, now, now),
+            )
+            memory_id = cursor.lastrowid
+            if embedding:
+                vec_bytes = serialize_vector(embedding)
+                conn.execute(
+                    "INSERT INTO vec_memories(memory_id, embedding) VALUES (?, ?)",
+                    (memory_id, vec_bytes),
+                )
+            inserted_count += 1
+
+    return inserted_count
+
+
 def tombstone_memory(conn: sqlite3.Connection, memory_id: int) -> bool:
     """Marks a memory as deleted without removing historical audit trail."""
     now = datetime.now(timezone.utc).isoformat()

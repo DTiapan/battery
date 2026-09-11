@@ -1,16 +1,16 @@
 # 🔋 Battery Context Engine — Retrieval Benchmark Results
 
-**Date:** 2026-09-11  
-**Evaluation Queries:** 15  
-**Corpus Size:** 15 items  
+**Date:** 2026-09-11
+**Evaluation Queries:** 15
+**Corpus Size:** 15 items
 
 ## Overall Retrieval Performance
 
 | Retrieval Strategy | Hit@1 | Hit@3 | Hit@5 | MRR | Avg Latency | p50 Latency |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
-| **BM25 (FTS5)** | **60.0%** | **66.7%** | **66.7%** | **0.6333** | 0.4ms | 0.3ms |
-| **Vector (sqlite-vec)** | **86.7%** | **93.3%** | **100.0%** | **0.9022** | 12.8ms | 12.8ms |
-| **Battery Hybrid (RRF)** | **73.3%** | **93.3%** | **100.0%** | **0.8389** | 13.0ms | 12.8ms |
+| **BM25 (FTS5)** | **60.0%** | **66.7%** | **66.7%** | **0.6333** | 0.6ms | 0.5ms |
+| **Vector (sqlite-vec)** | **86.7%** | **93.3%** | **100.0%** | **0.9022** | 16.7ms | 15.9ms |
+| **Battery Hybrid (RRF)** | **73.3%** | **93.3%** | **100.0%** | **0.8389** | 16.9ms | 16.6ms |
 
 ## Performance by Query Intent
 

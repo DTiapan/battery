@@ -4,9 +4,9 @@
     "Hit@3": 0.6667,
     "Hit@5": 0.6667,
     "MRR": 0.6333,
-    "Latency_Avg_ms": 0.37,
-    "Latency_P50_ms": 0.35,
-    "Latency_P95_ms": 0.52,
+    "Latency_Avg_ms": 0.55,
+    "Latency_P50_ms": 0.48,
+    "Latency_P95_ms": 0.97,
     "by_type": {
       "exact_keyword": {
         "Hit@1": 0.8,
@@ -30,9 +30,9 @@
     "Hit@3": 0.9333,
     "Hit@5": 1.0,
     "MRR": 0.9022,
-    "Latency_Avg_ms": 12.83,
-    "Latency_P50_ms": 12.78,
-    "Latency_P95_ms": 13.8,
+    "Latency_Avg_ms": 16.66,
+    "Latency_P50_ms": 15.94,
+    "Latency_P95_ms": 26.28,
     "by_type": {
       "exact_keyword": {
         "Hit@1": 1.0,
@@ -56,9 +56,9 @@
     "Hit@3": 0.9333,
     "Hit@5": 1.0,
     "MRR": 0.8389,
-    "Latency_Avg_ms": 13.0,
-    "Latency_P50_ms": 12.81,
-    "Latency_P95_ms": 13.66,
+    "Latency_Avg_ms": 16.88,
+    "Latency_P50_ms": 16.58,
+    "Latency_P95_ms": 23.58,
     "by_type": {
       "exact_keyword": {
         "Hit@1": 0.8,
