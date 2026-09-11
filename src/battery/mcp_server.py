@@ -21,6 +21,86 @@ from battery.retrieval import hybrid_search
 from battery.sync import export_battery_md
 
 
+def format_context_resource(conn: Any, limit_per_category: int = 5) -> str:
+    """Formats active rules, decisions, preferences, and recent context into markdown."""
+    categories = [
+        ("rule", "Active Rules & Constraints"),
+        ("decision", "Architectural Decisions"),
+        ("preference", "User Preferences & Workflow Habits"),
+        ("general", "General Context & Knowledge"),
+    ]
+
+    sections: List[str] = []
+    has_content = False
+
+    for cat_key, title in categories:
+        cursor = conn.execute(
+            """
+            SELECT id, content, importance
+            FROM memories
+            WHERE is_deleted = 0 AND category = ?
+            ORDER BY importance DESC, id DESC
+            LIMIT ?
+            """,
+            (cat_key, limit_per_category),
+        )
+        items = cursor.fetchall()
+        if items:
+            has_content = True
+            lines = [f"## {title}"]
+            for item in items:
+                lines.append(
+                    f"- **[ID:{item['id']}]** (importance: {item['importance']:.1f}) {item['content']}"
+                )
+            sections.append("\n".join(lines))
+
+    if not has_content:
+        return (
+            "# Battery Sovereign Context\n\n"
+            "> **Notice:** Sovereign memory substrate active. No memories recorded yet.\n"
+            "> Use the `save_memory` tool or `battery add` CLI command to store context.\n"
+        )
+
+    header = (
+        "# Battery Sovereign Context\n\n"
+        "> **Notice:** Sovereign memory substrate active. Adhere strictly to the active rules "
+        "and architectural decisions below before generating code or modifying the project.\n"
+    )
+    return header + "\n" + "\n\n".join(sections) + "\n"
+
+
+def format_rules_resource(conn: Any, limit: int = 20) -> str:
+    """Formats active rules and constraints into markdown."""
+    cursor = conn.execute(
+        """
+        SELECT id, content, importance
+        FROM memories
+        WHERE is_deleted = 0 AND category = 'rule'
+        ORDER BY importance DESC, id DESC
+        LIMIT ?
+        """,
+        (limit,),
+    )
+    items = cursor.fetchall()
+    if not items:
+        return (
+            "# Battery Active Rules & Constraints\n\n"
+            "> No active rules found. Use `save_memory` with category='rule' to record rules.\n"
+        )
+
+    lines = [
+        "# Battery Active Rules & Constraints",
+        "",
+        "> Sovereign rules that must be respected across all conversations and operations.",
+        "",
+    ]
+    for item in items:
+        lines.append(
+            f"- **[ID:{item['id']}]** (importance: {item['importance']:.1f}) {item['content']}"
+        )
+    return "\n".join(lines) + "\n"
+
+
 def create_mcp_server(
     db_path: Optional[Path] = None,
     md_path: Optional[Path] = None,
@@ -81,6 +161,102 @@ def create_mcp_server(
     )
     def list_memories(category: Optional[str] = None, limit: int = 20) -> List[Dict[str, Any]]:
         return db_list_memories(conn, category=category, limit=limit)
+
+    @server.resource(
+        "battery://context",
+        name="battery_context",
+        title="Battery Sovereign Context",
+        description="Curated active sovereign context, project constraints, and architectural decisions.",
+        mime_type="text/markdown",
+    )
+    def get_context_resource() -> str:
+        return format_context_resource(conn)
+
+    @server.resource(
+        "battery://rules",
+        name="battery_rules",
+        title="Battery Active Rules & Constraints",
+        description="Active sovereign rules and constraints stored in Battery.",
+        mime_type="text/markdown",
+    )
+    def get_rules_resource() -> str:
+        return format_rules_resource(conn)
+
+    @server.prompt(
+        name="battery-context",
+        description=(
+            "Proactively inject Battery sovereign context, active rules, "
+            "and task-relevant memories into the conversation."
+        ),
+    )
+    def battery_context_prompt(task: str = "") -> str:
+        cursor = conn.execute(
+            """
+            SELECT id, content, importance
+            FROM memories
+            WHERE is_deleted = 0 AND category = 'rule'
+            ORDER BY importance DESC, id DESC
+            LIMIT 5
+            """
+        )
+        rules = cursor.fetchall()
+
+        lines = [
+            "You are an AI assistant equipped with the Battery Sovereign Context Engine.",
+            "",
+            "## Sovereign Memory Directives",
+            "- Always follow the active project rules and architectural constraints documented below.",
+            "- Use the `recall_memory` tool to proactively query past decisions or patterns when unsure.",
+            "- Persist new user decisions, architectural choices, and constraints using `save_memory`.",
+            "",
+        ]
+
+        if rules:
+            lines.append("## Active Rules & Constraints")
+            for r in rules:
+                lines.append(
+                    f"- **[ID:{r['id']}]** (importance: {r['importance']:.1f}) {r['content']}"
+                )
+            lines.append("")
+
+        task_clean = task.strip()
+        if task_clean:
+            try:
+                relevant = hybrid_search(conn, task_clean, limit=5)
+            except Exception:
+                relevant = []
+
+            if relevant:
+                lines.append(f'## Task-Relevant Memories for "{task_clean}"')
+                for m in relevant:
+                    cat = m.get("category", "general")
+                    score = m.get("rrf_score", 0.0)
+                    lines.append(
+                        f"- **[ID:{m['id']}]** [{cat.upper()}] (score: {score:.4f}) {m['content']}"
+                    )
+                lines.append("")
+            else:
+                lines.append(f"## Current Task\nFocusing on: {task_clean}\n")
+        else:
+            cursor = conn.execute(
+                """
+                SELECT id, content, category, importance
+                FROM memories
+                WHERE is_deleted = 0 AND category IN ('decision', 'preference')
+                ORDER BY importance DESC, id DESC
+                LIMIT 6
+                """
+            )
+            other_items = cursor.fetchall()
+            if other_items:
+                lines.append("## Key Architectural Decisions & Preferences")
+                for item in other_items:
+                    lines.append(
+                        f"- **[ID:{item['id']}]** [{item['category'].upper()}] {item['content']}"
+                    )
+                lines.append("")
+
+        return "\n".join(lines).strip()
 
     return server
 

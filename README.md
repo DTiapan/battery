@@ -336,6 +336,21 @@ Add this block to your Claude Desktop config (`~/Library/Application Support/Cla
 | `list_memories(category=None, limit=20)` | Browses stored project context. |
 | `forget_memory(memory_id)` | Tombstones stale or deprecated rules. |
 
+### Available MCP Resources (Proactive Context Injection)
+
+Clients like Claude Desktop or Cursor can attach or read these resources to auto-inject sovereign memory at session start without waiting for the agent to call tools:
+
+| Resource URI | Description |
+| :--- | :--- |
+| `battery://context` | Curated active context grouped by Rules, Decisions, Preferences, and General notes. |
+| `battery://rules` | Active sovereign project rules and architectural constraints only. |
+
+### Available MCP Prompts (Session Initialization)
+
+| Prompt Name | Arguments | Purpose |
+| :--- | :--- | :--- |
+| `battery-context` | `task: str = ""` | Injects memory directives, active constraints, and RRF task-relevant memories into the conversation. |
+
 ---
 
 ## 📊 Retrieval Evaluation & Reliability Harness

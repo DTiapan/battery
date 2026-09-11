@@ -68,7 +68,21 @@ Browses stored memories chronologically or filtered by category (rule, decision,
 """
 ```
 
-### 2. Living Mirror Specification (`BATTERY.md`)
+### 2. Exposed MCP Resources (Proactive Context Injection)
+
+To mitigate LLM laziness (where models skip reactive `recall_memory` tool calls when overconfident), Battery exposes read-only MCP Resources that clients (Claude Desktop, Cursor, Gemini) can auto-fetch or attach at session initialization:
+
+* `battery://context` (`text/markdown`): Curated active sovereign context. Groups active constraints by `Active Rules & Constraints`, `Architectural Decisions`, `User Preferences & Workflow Habits`, and `General Context & Knowledge` sorted by `importance DESC, id DESC`.
+* `battery://rules` (`text/markdown`): High-priority active project rules and hard constraints only.
+
+### 3. Exposed MCP Prompts (Session Initialization)
+
+* `battery-context(task: str = "")`: A structured system prompt that injects:
+  1. Sovereign memory directives instructing the agent to consult `recall_memory` and persist invariants with `save_memory`.
+  2. Critical active rules and constraints (top priority).
+  3. Dynamic task-relevant memories retrieved via Reciprocal Rank Fusion hybrid search when `task` is specified, or baseline architectural decisions when omitted.
+
+### 4. Living Mirror Specification (`BATTERY.md`)
 Whenever a memory event is committed to SQLite:
 1. The engine formats the active memory set grouped by categories:
    * `# Project Memory & Architecture Invariants`
