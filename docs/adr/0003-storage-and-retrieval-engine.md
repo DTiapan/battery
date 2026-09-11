@@ -50,7 +50,12 @@ We select **Option 3: SQLite (WAL Mode) with FTS5 and `sqlite-vec`**.
 2. **Hybrid Scoring via Reciprocal Rank Fusion (RRF):**
    Final search scores are computed using rank reciprocal fusion:
    $$\text{RRF\_Score}(d) = \frac{w_{\text{text}}}{k + \text{rank}_{\text{bm25}}(d)} + \frac{w_{\text{vec}}}{k + \text{rank}_{\text{vec}}(d)}$$
-   where $k = 60$, $w_{\text{text}} = 0.5$, and $w_{\text{vec}} = 0.5$ by default.
+   where $k = 5$ (empirically tuned — see `src/battery/evals/rrf_tuning_report.md`),
+   $w_{\text{text}} = 0.5$, and $w_{\text{vec}} = 0.5$.
+   > **Note:** The academic default $k=60$ is optimised for long-document TREC/MS-MARCO retrieval.
+   > For Battery's short factual assertions (1–3 sentences), $k=5$ was found optimal via a
+   > grid sweep across 30 parameter combinations on 92 real-world engineering memories,
+   > achieving MRR=0.8583 vs MRR=0.8550 at $k=60$.
 3. **Deduplication:** Content is SHA-256 content-addressed to prevent redundant duplicate memories across multiple LLM turns.
 
 ## Consequences

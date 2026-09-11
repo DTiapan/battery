@@ -328,20 +328,43 @@ def evaluate(
         None, "--dataset", "-d", help="Custom evaluation dataset JSON path"
     ),
     stress: bool = typer.Option(
-        False, "--stress", "-s", help="Run scaled stress benchmark (up to 500 items under load)"
+        False, "--stress", "-s", help="Run scaled stress benchmark (500 items under load)"
     ),
-    scale: int = typer.Option(
-        500, "--scale", help="Scale factor for stress benchmark (default: 500)"
+    scale: int = typer.Option(500, "--scale", help="Scale factor for stress benchmark"),
+    real: bool = typer.Option(
+        False, "--real", "-r", help="Run real-world evaluation on Battery's own ADR/README corpus"
+    ),
+    tune: bool = typer.Option(
+        False, "--tune", "-t", help="Run RRF k/weight grid sweep to find optimal parameters"
     ),
     markdown: bool = typer.Option(
         True, "--markdown/--no-markdown", help="Generate Markdown evaluation report"
     ),
 ):
-    """Runs retrieval evaluation benchmarks comparing BM25, Vector, and Hybrid RRF."""
+    """Runs retrieval evaluation benchmarks comparing BM25, Vector, and Hybrid RRF.
+
+    Modes:
+      (default)   Golden 15-query benchmark on curated seed dataset
+      --real      Real-world benchmark on Battery's own ADR/README corpus (~100 items, 30 queries)
+      --stress    500-item scaled stress test measuring throughput and latency under load
+      --tune      RRF k/weight grid sweep: empirically find optimal hybrid search parameters
+    """
     if stress:
         from battery.evals.stress_test import run_stress_benchmark
 
         run_stress_benchmark(scale=scale, output_markdown=markdown)
+        return
+
+    if real:
+        from battery.evals.realworld_harness import run_realworld_evaluation
+
+        run_realworld_evaluation(output_markdown=markdown)
+        return
+
+    if tune:
+        from battery.evals.rrf_tuner import run_rrf_tuner
+
+        run_rrf_tuner(output_markdown=markdown)
         return
 
     from battery.evals.harness import load_dataset, run_evaluation

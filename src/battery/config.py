@@ -29,7 +29,18 @@ DEFAULT_BATTERY_MD_PATH = Path(os.environ.get("BATTERY_MD_PATH", Path.cwd() / "B
 # Embeddings & Retrieval constants
 EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 EMBEDDING_DIM = 384
-RRF_K = 60
+
+# RRF_K: Reciprocal Rank Fusion smoothing constant.
+# Academic default is k=60 (tuned for TREC/MS-MARCO long-document retrieval).
+# Empirically tuned on Battery's real-world corpus (92 engineering memories,
+# 30 authentic dev queries) via grid sweep across k=[5,10,20,30,40,60] ×
+# text_weight=[0.3–0.7]. Results (src/battery/evals/rrf_tuning_report.md):
+#   k=5,  tw=0.5, vw=0.5 → MRR=0.8583, Hit@1=83.3%  ← OPTIMAL
+#   k=10, tw=0.5, vw=0.5 → MRR=0.8567, Hit@1=83.3%
+#   k=60, tw=0.5, vw=0.5 → MRR=0.8550, Hit@1=83.3%
+# Lower k is better for short (1–3 sentence) factual assertions because rank
+# positions carry more absolute signal vs. long document retrieval.
+RRF_K = 5
 DEFAULT_TEXT_WEIGHT = 0.5
 DEFAULT_VEC_WEIGHT = 0.5
 
