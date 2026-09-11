@@ -32,9 +32,11 @@ app = typer.Typer(
 profile_app = typer.Typer(name="profile", help="Manage isolated multi-battery context profiles.")
 hook_app = typer.Typer(name="hook", help="Install and run Claude Code lifecycle hooks.")
 checkpoint_app = typer.Typer(name="checkpoint", help="Inspect session checkpoints.")
+handoff_app = typer.Typer(name="handoff", help="Export and load cross-tool session handoffs.")
 app.add_typer(profile_app, name="profile")
 app.add_typer(hook_app, name="hook")
 app.add_typer(checkpoint_app, name="checkpoint")
+app.add_typer(handoff_app, name="handoff")
 console = Console()
 
 
@@ -672,6 +674,136 @@ def checkpoint_show(
         return
     payload = rows[0]["payload"]
     console.print(_checkpoint_content(payload))
+
+
+@handoff_app.command(name="export")
+def handoff_export(
+    from_client: str = typer.Option(
+        "unknown", "--from-client", help="Source AI client (e.g. cursor, claude-code)"
+    ),
+    to_client: Optional[str] = typer.Option(
+        None, "--to-client", help="Target AI client (optional hint for the next session)"
+    ),
+    stdout: bool = typer.Option(False, "--stdout", help="Print markdown to stdout instead of writing files"),
+    profile: Optional[str] = typer.Option(None, "--profile", "-p", help="Target context profile"),
+    db_path: Optional[Path] = typer.Option(None, "--db", help="Path to SQLite database"),
+):
+    """Exports a structured handoff artifact for switching AI tools."""
+    from battery.config import get_active_profile
+    from battery.handoff import export_handoff
+
+    resolved_db, _ = resolve_paths(profile, db_path, None)
+    conn = get_connection(resolved_db)
+    init_db(conn)
+
+    try:
+        result = export_handoff(
+            conn,
+            project_root=Path.cwd(),
+            profile=profile or get_active_profile(),
+            from_client=from_client,
+            to_client=to_client,
+            stdout=stdout,
+        )
+        conn.commit()
+    except ValueError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+
+    if stdout:
+        print(result["markdown"])
+        return
+
+    console.print(
+        Panel.fit(
+            f"[green]✓ Exported handoff[/green]\n"
+            f"ID: [bold]{result['handoff_id'][:8]}[/bold]\n"
+            f"JSON: [dim]{result['path']}[/dim]\n"
+            f"Markdown: [dim]{result['markdown_path']}[/dim]\n"
+            f"From: [cyan]{from_client}[/cyan]"
+            + (f" → [cyan]{to_client}[/cyan]" if to_client else ""),
+            title="Handoff Export",
+        )
+    )
+
+
+@handoff_app.command(name="load")
+def handoff_load(
+    latest: bool = typer.Option(True, "--latest", help="Load the latest project handoff artifact"),
+    file: Optional[Path] = typer.Option(None, "--file", help="Load a specific handoff JSON file"),
+    ingest: bool = typer.Option(
+        False, "--ingest", help="Also save the handoff as episodic memory in SQLite"
+    ),
+    to_client: Optional[str] = typer.Option(
+        None, "--to-client", help="Client loading this handoff (for lineage metadata)"
+    ),
+    profile: Optional[str] = typer.Option(None, "--profile", "-p", help="Target context profile"),
+    db_path: Optional[Path] = typer.Option(None, "--db", help="Path to SQLite database"),
+    md_path: Optional[Path] = typer.Option(None, "--md", help="Path to living BATTERY.md mirror"),
+):
+    """Loads a handoff artifact as agent-ready markdown context."""
+    from battery.handoff import load_handoff
+
+    if not latest and file is None:
+        console.print("[red]Specify --file or use --latest[/red]")
+        raise typer.Exit(code=1)
+
+    resolved_db, resolved_md = resolve_paths(profile, db_path, md_path)
+    conn = get_connection(resolved_db)
+    init_db(conn)
+
+    try:
+        result = load_handoff(
+            conn,
+            resolved_md,
+            project_root=Path.cwd() if latest else None,
+            file_path=file,
+            ingest=ingest,
+            to_client=to_client,
+        )
+        conn.commit()
+    except FileNotFoundError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+
+    if ingest and result.get("memory_id"):
+        console.print(
+            f"[green]✓ Ingested handoff as episodic memory #{result['memory_id']}[/green]"
+        )
+
+    console.print(result["markdown"])
+
+
+@handoff_app.command(name="show")
+def handoff_show(
+    profile: Optional[str] = typer.Option(None, "--profile", "-p", help="Target context profile"),
+    file: Optional[Path] = typer.Option(None, "--file", help="Show a specific handoff JSON file"),
+):
+    """Shows metadata for the latest handoff without loading into memory."""
+    from battery.handoff import read_handoff_artifact
+
+    try:
+        artifact = read_handoff_artifact(project_root=Path.cwd(), file_path=file)
+    except FileNotFoundError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+
+    table = Table(title="Battery Handoff")
+    table.add_column("Field", style="bold")
+    table.add_column("Value")
+    for key in (
+        "handoff_id",
+        "from_client",
+        "to_client",
+        "created_at",
+        "verification_status",
+        "checkpoint_id",
+        "project_root",
+    ):
+        value = artifact.get(key)
+        if value is not None:
+            table.add_row(key, str(value))
+    console.print(table)
 
 
 def main():

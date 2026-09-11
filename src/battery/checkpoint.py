@@ -128,7 +128,17 @@ def handle_hook_event(
         return {"status": "ok", "event": event_name, "trigger": trigger, **result}
 
     if event_name == "SessionStart":
+        from battery.handoff import get_latest_handoff_context
+
         project_root = hook_input.get("cwd") or str(Path.cwd())
+        handoff_context = get_latest_handoff_context(Path(project_root))
+        if handoff_context:
+            return {
+                "status": "ok",
+                "event": event_name,
+                "additionalContext": f"Battery handoff (switch tools):\n{handoff_context[:4000]}",
+            }
+
         checkpoints = _latest_checkpoint_for_project(conn, project_root)
         if checkpoints:
             preview = _checkpoint_content(checkpoints["payload"])[:500]

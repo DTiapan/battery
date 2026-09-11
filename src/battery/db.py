@@ -24,7 +24,7 @@ from battery.config import DEFAULT_DB_PATH, EMBEDDING_DIM  # noqa: E402
 from battery.migrate import log_memory_event, migrate_db  # noqa: E402
 
 VALID_CATEGORIES = frozenset({"rule", "decision", "preference", "general", "episodic"})
-VALID_SOURCES = frozenset({"manual", "hook", "mcp", "cli"})
+VALID_SOURCES = frozenset({"manual", "hook", "mcp", "cli", "handoff"})
 VALID_STALENESS = frozenset({"valid", "stale", "missing"})
 
 

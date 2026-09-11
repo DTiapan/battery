@@ -116,7 +116,7 @@ def create_mcp_server(
             "rules, architectural decisions, and project conventions. Use 'save_memory' to persist "
             "new rules or decisions."
         ),
-        version="0.2.0",
+        version="0.3.0",
     )
 
     conn = get_connection(resolved_db)

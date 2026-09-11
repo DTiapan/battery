@@ -9,7 +9,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python: 3.11+](https://img.shields.io/badge/Python-3.11%2B-blue.svg)](https://www.python.org/)
 [![MCP: 2.x](https://img.shields.io/badge/MCP-2.x%20Compliant-green.svg)](https://modelcontextprotocol.io/)
-[![Version: 0.2.0](https://img.shields.io/badge/version-0.2.0-blue.svg)](pyproject.toml)
+[![Version: 0.3.0](https://img.shields.io/badge/version-0.3.0-blue.svg)](pyproject.toml)
 
 **Keywords:** local AI memory · MCP memory server · Cursor context · Claude Code memory · hybrid RAG · coding agent context · stale memory pruning · session checkpoints
 
@@ -109,6 +109,20 @@ uv run battery prune --dry-run
 uv run battery prune
 ```
 
+### Hand off context between tools
+
+Before switching from Cursor to Claude Code (or vice versa):
+
+```bash
+uv run battery handoff export --from-client cursor --to-client claude-code
+# In the other tool:
+uv run battery handoff load --latest
+# Optional: persist loaded handoff as episodic memory
+uv run battery handoff load --latest --ingest --to-client claude-code
+```
+
+Artifacts are written to `.battery/handoff/` in your project. Claude Code `SessionStart` hooks auto-inject the latest handoff when present.
+
 ---
 
 ## Features (v0.2)
@@ -194,6 +208,7 @@ uv run battery serve --profile payments-service
 | `battery profile create\|list` | Manage context profiles |
 | `battery use <profile>` | Switch active profile |
 | `battery hook install\|uninstall` | Claude Code lifecycle hooks |
+| `battery handoff export\|load\|show` | Cross-tool session handoff (Cursor ↔ Claude) |
 | `battery checkpoint list\|show` | Inspect session checkpoints |
 | `battery prune [--dry-run]` | Remove stale file-cited memories |
 | `battery doctor [--adoption]` | Health and setup diagnostics |
@@ -245,7 +260,7 @@ Full reports: [`realworld_benchmark_report.md`](src/battery/evals/realworld_benc
 ## Development
 
 ```bash
-uv run pytest -v          # 27 tests
+uv run pytest -v          # 34 tests
 uv run battery doctor     # local health check
 ```
 
