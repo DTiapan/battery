@@ -21,6 +21,7 @@ from battery.config import (
 from battery.db import get_connection, init_db, insert_memory, list_memories, tombstone_memory
 from battery.embeddings import embed_text
 from battery.mcp_server import run_mcp_server
+from battery.prune import prune_stale_memories
 from battery.retrieval import hybrid_search
 from battery.sync import export_battery_md, import_battery_md
 
@@ -29,7 +30,11 @@ app = typer.Typer(
     help="Battery Context Engine: Sovereign, local-first context substrate for AI workflows.",
 )
 profile_app = typer.Typer(name="profile", help="Manage isolated multi-battery context profiles.")
+hook_app = typer.Typer(name="hook", help="Install and run Claude Code lifecycle hooks.")
+checkpoint_app = typer.Typer(name="checkpoint", help="Inspect session checkpoints.")
 app.add_typer(profile_app, name="profile")
+app.add_typer(hook_app, name="hook")
+app.add_typer(checkpoint_app, name="checkpoint")
 console = Console()
 
 
@@ -469,6 +474,204 @@ def setup(
         console.print(Panel.fit(msg, title="1-Click Client Setup"))
     else:
         console.print("[red]✗ No client configs were updated.[/red]")
+
+    console.print(
+        "\n[dim]Tip: Enable MCP resources in your client UI so battery://context loads at session start.[/dim]"
+    )
+    console.print(
+        "[dim]For Claude Code auto-capture, run: [bold]battery hook install --scope project[/bold][/dim]"
+    )
+
+
+@app.command()
+def prune(
+    dry_run: bool = typer.Option(False, "--dry-run", help="Report stale memories without deleting"),
+    since_commit: Optional[str] = typer.Option(
+        None, "--since-commit", help="Only consider git deletions since this commit"
+    ),
+    profile: Optional[str] = typer.Option(None, "--profile", "-p", help="Target context profile"),
+    db_path: Optional[Path] = typer.Option(None, "--db", help="Path to SQLite database"),
+):
+    """Tombstones memories with stale or missing file citations."""
+    resolved_db, _ = resolve_paths(profile, db_path, None)
+    conn = get_connection(resolved_db)
+    init_db(conn)
+    result = prune_stale_memories(
+        conn,
+        project_root=Path.cwd(),
+        since_commit=since_commit,
+        dry_run=dry_run,
+    )
+    label = "Would prune" if dry_run else "Pruned"
+    console.print(
+        f"[green]✓ {label} {len(result['pruned_ids'])} / {result['candidates']} stale memories[/green]"
+    )
+    for mem in result["memories"][:10]:
+        console.print(f"  [dim]#{mem['id']}[/dim] ({mem.get('reason')}) {mem['content'][:80]}...")
+
+
+@app.command()
+def doctor(
+    adoption: bool = typer.Option(False, "--adoption", help="Include MCP and hook adoption checks"),
+    profile: Optional[str] = typer.Option(None, "--profile", "-p", help="Target context profile"),
+    db_path: Optional[Path] = typer.Option(None, "--db", help="Path to SQLite database"),
+    md_path: Optional[Path] = typer.Option(None, "--md", help="Path to living BATTERY.md mirror"),
+):
+    """Runs Battery health and adoption diagnostics."""
+    from battery.doctor import run_doctor
+
+    resolved_db, resolved_md = resolve_paths(profile, db_path, md_path)
+    conn = get_connection(resolved_db)
+    init_db(conn)
+    report = run_doctor(conn, resolved_md, adoption=adoption, project_dir=Path.cwd())
+
+    table = Table(title="Battery Doctor")
+    table.add_column("Check", style="bold")
+    table.add_column("Status", justify="center")
+    table.add_column("Detail")
+
+    for check in report["checks"]:
+        status = "[green]PASS[/green]" if check["ok"] else "[red]FAIL[/red]"
+        table.add_row(check["name"], status, check["detail"])
+        if not check["ok"] and check.get("fix"):
+            table.add_row("", "", f"[yellow]Fix:[/yellow] {check['fix']}")
+
+    console.print(table)
+    if report["healthy"]:
+        console.print("[green]✓ Battery is healthy[/green]")
+    else:
+        console.print(
+            f"[yellow]⚠ {report['passed']}/{report['total']} checks passed[/yellow]"
+        )
+        raise typer.Exit(code=1)
+
+
+@hook_app.command(name="install")
+def hook_install(
+    scope: str = typer.Option(
+        "project", "--scope", "-s", help="Install scope: 'project' or 'user'"
+    ),
+):
+    """Installs Battery lifecycle hooks into Claude Code settings."""
+    from battery.hooks import install_hooks
+
+    if scope not in ("project", "user"):
+        console.print("[red]Scope must be 'project' or 'user'[/red]")
+        raise typer.Exit(code=1)
+    result = install_hooks(scope=scope)  # type: ignore[arg-type]
+    console.print(
+        Panel.fit(
+            f"[green]✓ Installed Battery hooks ({scope})[/green]\n"
+            f"Settings: [dim]{result['settings_path']}[/dim]\n"
+            f"Events: {', '.join(result['events'])}",
+            title="Hook Install",
+        )
+    )
+
+
+@hook_app.command(name="uninstall")
+def hook_uninstall(
+    scope: str = typer.Option(
+        "project", "--scope", "-s", help="Install scope: 'project' or 'user'"
+    ),
+):
+    """Removes Battery lifecycle hooks from Claude Code settings."""
+    from battery.hooks import uninstall_hooks
+
+    if scope not in ("project", "user"):
+        console.print("[red]Scope must be 'project' or 'user'[/red]")
+        raise typer.Exit(code=1)
+    result = uninstall_hooks(scope=scope)  # type: ignore[arg-type]
+    console.print(f"[green]✓ Removed hooks from {result['settings_path']}[/green]")
+
+
+@hook_app.command(name="run")
+def hook_run(
+    profile: Optional[str] = typer.Option(None, "--profile", "-p", help="Target context profile"),
+    db_path: Optional[Path] = typer.Option(None, "--db", help="Path to SQLite database"),
+    md_path: Optional[Path] = typer.Option(None, "--md", help="Path to living BATTERY.md mirror"),
+):
+    """Entrypoint for Claude Code hooks (reads JSON from stdin)."""
+    import sys
+
+    from battery.checkpoint import handle_hook_event, parse_hook_stdin
+
+    raw = sys.stdin.read()
+    hook_input = parse_hook_stdin(raw)
+    resolved_db, resolved_md = resolve_paths(profile, db_path, md_path)
+    conn = get_connection(resolved_db)
+    init_db(conn)
+
+    try:
+        result = handle_hook_event(conn, hook_input, resolved_md)
+        conn.commit()
+    except Exception as exc:
+        console.print(json.dumps({"status": "error", "message": str(exc)}))
+        raise typer.Exit(code=1) from exc
+
+    if result.get("additionalContext"):
+        print(json.dumps({"hookSpecificOutput": {"additionalContext": result["additionalContext"]}}))
+    else:
+        print(json.dumps(result))
+
+
+@checkpoint_app.command(name="list")
+def checkpoint_list(
+    limit: int = typer.Option(10, "--limit", "-n", help="Max checkpoints to show"),
+    profile: Optional[str] = typer.Option(None, "--profile", "-p", help="Target context profile"),
+    db_path: Optional[Path] = typer.Option(None, "--db", help="Path to SQLite database"),
+):
+    """Lists recent session checkpoints for the current project."""
+    from battery.db import list_session_checkpoints
+
+    resolved_db, _ = resolve_paths(profile, db_path, None)
+    conn = get_connection(resolved_db)
+    init_db(conn)
+    rows = list_session_checkpoints(conn, project_root=str(Path.cwd()), limit=limit)
+    if not rows:
+        console.print("[dim]No checkpoints found for this project.[/dim]")
+        return
+    table = Table(title="Session Checkpoints")
+    table.add_column("ID")
+    table.add_column("Session")
+    table.add_column("Event")
+    table.add_column("Memory")
+    table.add_column("Created")
+    for row in rows:
+        table.add_row(
+            str(row["id"]),
+            row["session_id"][:12],
+            row["event_type"],
+            str(row.get("memory_id") or "-"),
+            row["created_at"][:19],
+        )
+    console.print(table)
+
+
+@checkpoint_app.command(name="show")
+def checkpoint_show(
+    checkpoint_id: Optional[int] = typer.Option(None, "--id", help="Checkpoint ID"),
+    latest: bool = typer.Option(True, "--latest", help="Show latest checkpoint when --id omitted"),
+    profile: Optional[str] = typer.Option(None, "--profile", "-p", help="Target context profile"),
+    db_path: Optional[Path] = typer.Option(None, "--db", help="Path to SQLite database"),
+):
+    """Shows checkpoint payload as markdown."""
+    from battery.checkpoint import _checkpoint_content
+    from battery.db import list_session_checkpoints
+
+    resolved_db, _ = resolve_paths(profile, db_path, None)
+    conn = get_connection(resolved_db)
+    init_db(conn)
+    rows = list_session_checkpoints(conn, project_root=str(Path.cwd()), limit=50)
+    if checkpoint_id is not None:
+        rows = [r for r in rows if r["id"] == checkpoint_id]
+    elif latest and rows:
+        rows = rows[:1]
+    if not rows:
+        console.print("[dim]No checkpoint found.[/dim]")
+        return
+    payload = rows[0]["payload"]
+    console.print(_checkpoint_content(payload))
 
 
 def main():

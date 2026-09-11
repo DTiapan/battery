@@ -45,5 +45,8 @@ Thumbs.db
 # Temporary files and logs
 *.log
 *.tmp
+*.ses
+:memory:*
 scratch/
 *.metadata.json
+

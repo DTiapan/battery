@@ -16,6 +16,7 @@ CATEGORY_TITLES = {
     "decision": "Architectural Decisions",
     "preference": "User Preferences & Habits",
     "general": "General Knowledge & Context",
+    "episodic": "Session Checkpoints & Episodic Memory",
 }
 
 

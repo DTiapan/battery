@@ -116,7 +116,7 @@ def create_mcp_server(
             "rules, architectural decisions, and project conventions. Use 'save_memory' to persist "
             "new rules or decisions."
         ),
-        version="0.1.0",
+        version="0.2.0",
     )
 
     conn = get_connection(resolved_db)
@@ -134,10 +134,22 @@ def create_mcp_server(
         description="Persist a rule, architectural decision, user preference, or fact to local memory."
     )
     def save_memory(
-        content: str, category: str = "general", importance: float = 1.0
+        content: str,
+        category: str = "general",
+        importance: float = 1.0,
+        file_paths: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
         vec = embed_text(content)
-        result = insert_memory(conn, content, vec, category=category, importance=importance)
+        citations = [{"file_path": p} for p in (file_paths or []) if p.strip()]
+        result = insert_memory(
+            conn,
+            content,
+            vec,
+            category=category,
+            importance=importance,
+            source="mcp",
+            citations=citations or None,
+        )
         # Update living BATTERY.md mirror
         try:
             export_battery_md(conn, resolved_md)

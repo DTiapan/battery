@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Optional
 from battery.config import DEFAULT_TEXT_WEIGHT, DEFAULT_VEC_WEIGHT, RRF_K
 from battery.db import serialize_vector
 from battery.embeddings import embed_text
+from battery.verify import filter_verified_results
 
 STOP_WORDS = {
     "a",
@@ -221,6 +222,16 @@ def search_vector(
     return results
 
 
+def _active_memory_filter_sql(category: Optional[str]) -> tuple[str, List[Any]]:
+    """SQL fragment restricting to active, valid memories."""
+    sql = " AND m.is_deleted = 0 AND m.staleness = 'valid'"
+    params: List[Any] = []
+    if category:
+        sql += " AND m.category = ?"
+        params.append(category)
+    return sql, params
+
+
 def hybrid_search(
     conn: sqlite3.Connection,
     query: str,
@@ -229,6 +240,7 @@ def hybrid_search(
     text_weight: float = DEFAULT_TEXT_WEIGHT,
     vec_weight: float = DEFAULT_VEC_WEIGHT,
     k: int = RRF_K,
+    verify: bool = True,
 ) -> List[Dict[str, Any]]:
     """
     Executes hybrid search fusing BM25 (FTS5) and dense vector (sqlite-vec)
@@ -238,41 +250,56 @@ def hybrid_search(
     if not query_clean:
         return []
 
-    # 1. BM25 search via FTS5
+    active_filter, active_params = _active_memory_filter_sql(category)
+
+    # 1. BM25 search via FTS5 (active memories only)
     bm25_ranks: Dict[int, int] = {}
     fts_query = sanitize_fts5_query(query_clean)
     try:
         cursor = conn.execute(
-            """
-            SELECT rowid as memory_id
-            FROM memories_fts
-            WHERE memories_fts MATCH ?
-            ORDER BY rank
+            f"""
+            SELECT f.rowid as memory_id
+            FROM memories_fts f
+            JOIN memories m ON m.id = f.rowid
+            WHERE memories_fts MATCH ?{active_filter}
+            ORDER BY f.rank
             LIMIT 50
             """,
-            (fts_query,),
+            (fts_query, *active_params),
         )
         for rank_idx, row in enumerate(cursor.fetchall()):
             bm25_ranks[row["memory_id"]] = rank_idx + 1
     except sqlite3.OperationalError:
-        # Gracefully handle any FTS5 syntax edge cases
         pass
 
-    # 2. Vector search via sqlite-vec
+    # 2. Vector search via sqlite-vec (active memories only)
     vec_ranks: Dict[int, int] = {}
     query_vec = embed_text(query_clean)
     query_bytes = serialize_vector(query_vec)
     cursor = conn.execute(
-        """
-        SELECT memory_id, distance
-        FROM vec_memories
-        WHERE embedding MATCH ? AND k = 50
-        ORDER BY distance ASC
+        f"""
+        SELECT v.memory_id, v.distance
+        FROM vec_memories v
+        JOIN memories m ON m.id = v.memory_id
+        WHERE v.embedding MATCH ? AND k = 50{active_filter}
+        ORDER BY v.distance ASC
         """,
-        (query_bytes,),
+        (query_bytes, *active_params),
     )
     for rank_idx, row in enumerate(cursor.fetchall()):
         vec_ranks[row["memory_id"]] = rank_idx + 1
+
+    # If corpus is large and BM25 found nothing, lean on vector ordering
+    memory_count = conn.execute(
+        "SELECT COUNT(*) FROM memories WHERE is_deleted = 0"
+    ).fetchone()[0]
+    if memory_count >= 200 and not bm25_ranks and vec_ranks:
+        results = search_vector(conn, query_clean, limit=limit, category=category)
+        for record in results:
+            record["rrf_score"] = record.get("score", 0.0)
+        if verify:
+            return filter_verified_results(conn, results)
+        return results
 
     # 3. Reciprocal Rank Fusion (RRF)
     all_memory_ids = set(bm25_ranks.keys()) | set(vec_ranks.keys())
@@ -291,9 +318,9 @@ def hybrid_search(
     # 4. Fetch memory contents and metadata
     placeholders = ",".join("?" for _ in all_memory_ids)
     sql = f"""
-        SELECT id, content, category, importance, created_at, updated_at
+        SELECT id, content, category, importance, created_at, updated_at, staleness
         FROM memories
-        WHERE id IN ({placeholders}) AND is_deleted = 0
+        WHERE id IN ({placeholders}) AND is_deleted = 0 AND staleness = 'valid'
     """
     params: List[Any] = list(all_memory_ids)
     if category:
@@ -308,10 +335,13 @@ def hybrid_search(
         if mem_id in rows:
             record = rows[mem_id]
             record["score"] = round(score, 6)
+            record["rrf_score"] = record["score"]
             record["bm25_rank"] = bm25_ranks.get(mem_id)
             record["vec_rank"] = vec_ranks.get(mem_id)
             results.append(record)
 
-    # Sort descending by fused RRF score
     results.sort(key=lambda x: x["score"], reverse=True)
-    return results[:limit]
+    top = results[: limit * 2 if verify else limit]
+    if verify:
+        top = filter_verified_results(conn, top)
+    return top[:limit]

@@ -21,6 +21,11 @@ if sqlite3 is None:
 import sqlite_vec  # noqa: E402
 
 from battery.config import DEFAULT_DB_PATH, EMBEDDING_DIM  # noqa: E402
+from battery.migrate import log_memory_event, migrate_db  # noqa: E402
+
+VALID_CATEGORIES = frozenset({"rule", "decision", "preference", "general", "episodic"})
+VALID_SOURCES = frozenset({"manual", "hook", "mcp", "cli"})
+VALID_STALENESS = frozenset({"valid", "stale", "missing"})
 
 
 def serialize_vector(vector: List[float]) -> bytes:
@@ -46,7 +51,7 @@ def get_connection(db_path: Path = DEFAULT_DB_PATH) -> sqlite3.Connection:
 
 
 def init_db(conn: sqlite3.Connection) -> None:
-    """Initializes tables, FTS5 virtual index, and vec0 vector virtual table."""
+    """Initializes tables, FTS5 virtual index, vec0 vector table, and runs migrations."""
     with conn:
         # 1. Base storage table
         conn.execute("""
@@ -104,10 +109,67 @@ def init_db(conn: sqlite3.Connection) -> None:
         );
         """)
 
+    migrate_db(conn)
+
 
 def hash_content(content: str) -> str:
     """Returns SHA-256 hex digest of normalized content."""
     return hashlib.sha256(content.strip().encode("utf-8")).hexdigest()
+
+
+def hash_file_snippet(path: Path, line_start: Optional[int] = None, line_end: Optional[int] = None) -> str:
+    """Returns SHA-256 of file content or a line range for citation verification."""
+    if not path.is_file():
+        return ""
+    text = path.read_text(encoding="utf-8", errors="replace")
+    if line_start is not None and line_end is not None:
+        lines = text.splitlines()
+        start = max(0, line_start - 1)
+        end = min(len(lines), line_end)
+        text = "\n".join(lines[start:end])
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def insert_citations(
+    conn: sqlite3.Connection,
+    memory_id: int,
+    citations: List[Dict[str, Any]],
+) -> int:
+    """Inserts file citations for a memory. Returns count inserted."""
+    inserted = 0
+    for citation in citations:
+        file_path = str(citation.get("file_path", "")).strip()
+        if not file_path:
+            continue
+        line_start = citation.get("line_start")
+        line_end = citation.get("line_end")
+        snippet_hash = citation.get("snippet_hash")
+        if not snippet_hash:
+            path = Path(file_path)
+            snippet_hash = hash_file_snippet(path, line_start, line_end) or None
+        conn.execute(
+            """
+            INSERT OR IGNORE INTO memory_citations(
+                memory_id, file_path, snippet_hash, line_start, line_end
+            ) VALUES (?, ?, ?, ?, ?)
+            """,
+            (memory_id, file_path, snippet_hash, line_start, line_end),
+        )
+        inserted += 1
+    return inserted
+
+
+def get_citations_for_memory(conn: sqlite3.Connection, memory_id: int) -> List[Dict[str, Any]]:
+    """Returns all citations linked to a memory."""
+    cursor = conn.execute(
+        """
+        SELECT id, memory_id, file_path, snippet_hash, line_start, line_end
+        FROM memory_citations
+        WHERE memory_id = ?
+        """,
+        (memory_id,),
+    )
+    return [dict(row) for row in cursor.fetchall()]
 
 
 def insert_memory(
@@ -116,11 +178,20 @@ def insert_memory(
     embedding: List[float],
     category: str = "general",
     importance: float = 1.0,
+    source: str = "manual",
+    session_id: Optional[str] = None,
+    commit_sha: Optional[str] = None,
+    citations: Optional[List[Dict[str, Any]]] = None,
+    log_event: bool = True,
 ) -> Dict[str, Any]:
     """Inserts a memory and its embedding, handling content deduplication."""
     content_clean = content.strip()
     c_hash = hash_content(content_clean)
     now = datetime.now(timezone.utc).isoformat()
+    if category not in VALID_CATEGORIES:
+        category = "general"
+    if source not in VALID_SOURCES:
+        source = "manual"
 
     with conn:
         cursor = conn.execute(
@@ -131,40 +202,95 @@ def insert_memory(
         if existing:
             memory_id = existing["id"]
             if existing["is_deleted"]:
-                # Undelete and update timestamp
                 conn.execute(
-                    "UPDATE memories SET is_deleted = 0, category = ?, importance = ?, updated_at = ? WHERE id = ?",
-                    (category, importance, now, memory_id),
+                    """
+                    UPDATE memories
+                    SET is_deleted = 0, category = ?, importance = ?, updated_at = ?,
+                        source = ?, session_id = ?, commit_sha = ?,
+                        staleness = 'valid', last_verified_at = ?
+                    WHERE id = ?
+                    """,
+                    (
+                        category,
+                        importance,
+                        now,
+                        source,
+                        session_id,
+                        commit_sha,
+                        now,
+                        memory_id,
+                    ),
                 )
                 vec_bytes = serialize_vector(embedding)
                 conn.execute(
                     "INSERT OR REPLACE INTO vec_memories(memory_id, embedding) VALUES (?, ?)",
                     (memory_id, vec_bytes),
                 )
-            return {
+                status = "restored"
+            else:
+                status = "existing"
+
+            if citations:
+                insert_citations(conn, memory_id, citations)
+
+            result = {
                 "id": memory_id,
                 "content_hash": c_hash,
                 "content": content_clean,
                 "category": category,
                 "importance": importance,
-                "status": "existing" if not existing["is_deleted"] else "restored",
+                "source": source,
+                "status": status,
             }
+            if log_event and status in ("created", "restored"):
+                log_memory_event(
+                    conn,
+                    "ASSERT",
+                    memory_id,
+                    {"content_hash": c_hash, "category": category, "source": source},
+                )
+            return result
 
-        # Insert new record
         cursor = conn.execute(
             """
-            INSERT INTO memories(content_hash, content, category, importance, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO memories(
+                content_hash, content, category, importance,
+                created_at, updated_at, source, session_id, commit_sha,
+                staleness, last_verified_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'valid', ?)
             """,
-            (c_hash, content_clean, category, importance, now, now),
+            (
+                c_hash,
+                content_clean,
+                category,
+                importance,
+                now,
+                now,
+                source,
+                session_id,
+                commit_sha,
+                now,
+            ),
         )
         memory_id = cursor.lastrowid
 
-        # Insert into vector virtual table
         vec_bytes = serialize_vector(embedding)
         conn.execute(
-            "INSERT INTO vec_memories(memory_id, embedding) VALUES (?, ?)", (memory_id, vec_bytes)
+            "INSERT INTO vec_memories(memory_id, embedding) VALUES (?, ?)",
+            (memory_id, vec_bytes),
         )
+
+        if citations:
+            insert_citations(conn, memory_id, citations)
+
+        if log_event:
+            log_memory_event(
+                conn,
+                "ASSERT",
+                memory_id,
+                {"content_hash": c_hash, "category": category, "source": source},
+            )
 
         return {
             "id": memory_id,
@@ -172,6 +298,7 @@ def insert_memory(
             "content": content_clean,
             "category": category,
             "importance": importance,
+            "source": source,
             "status": "created",
         }
 
@@ -184,58 +311,45 @@ def insert_memories_batch(
     if not items:
         return 0
 
-    now = datetime.now(timezone.utc).isoformat()
     inserted_count = 0
-
-    with conn:
-        for item in items:
-            content_clean = item["content"].strip()
-            c_hash = hash_content(content_clean)
-            category = item.get("category", "general")
-            importance = item.get("importance", 1.0)
-            embedding = item.get("embedding")
-
-            cursor = conn.execute(
-                "SELECT id, is_deleted FROM memories WHERE content_hash = ?", (c_hash,)
-            )
-            existing = cursor.fetchone()
-
-            if existing:
-                memory_id = existing["id"]
-                if existing["is_deleted"]:
-                    conn.execute(
-                        "UPDATE memories SET is_deleted = 0, category = ?, importance = ?, updated_at = ? WHERE id = ?",
-                        (category, importance, now, memory_id),
-                    )
-                    if embedding:
-                        vec_bytes = serialize_vector(embedding)
-                        conn.execute(
-                            "INSERT OR REPLACE INTO vec_memories(memory_id, embedding) VALUES (?, ?)",
-                            (memory_id, vec_bytes),
-                        )
-                    inserted_count += 1
-                continue
-
-            cursor = conn.execute(
-                """
-                INSERT INTO memories(content_hash, content, category, importance, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?)
-                """,
-                (c_hash, content_clean, category, importance, now, now),
-            )
-            memory_id = cursor.lastrowid
-            if embedding:
-                vec_bytes = serialize_vector(embedding)
-                conn.execute(
-                    "INSERT INTO vec_memories(memory_id, embedding) VALUES (?, ?)",
-                    (memory_id, vec_bytes),
-                )
+    for item in items:
+        embedding = item.get("embedding")
+        if not embedding:
+            continue
+        result = insert_memory(
+            conn,
+            item["content"],
+            embedding,
+            category=item.get("category", "general"),
+            importance=item.get("importance", 1.0),
+            source=item.get("source", "manual"),
+            log_event=False,
+        )
+        if result["status"] in ("created", "restored"):
             inserted_count += 1
 
     return inserted_count
 
 
-def tombstone_memory(conn: sqlite3.Connection, memory_id: int) -> bool:
+def mark_memory_staleness(
+    conn: sqlite3.Connection,
+    memory_id: int,
+    staleness: str,
+) -> None:
+    """Updates staleness status for a memory."""
+    if staleness not in VALID_STALENESS:
+        staleness = "stale"
+    now = datetime.now(timezone.utc).isoformat()
+    conn.execute(
+        """
+        UPDATE memories SET staleness = ?, last_verified_at = ?, updated_at = ?
+        WHERE id = ?
+        """,
+        (staleness, now, now, memory_id),
+    )
+
+
+def tombstone_memory(conn: sqlite3.Connection, memory_id: int, reason: str = "manual") -> bool:
     """Marks a memory as deleted without removing historical audit trail."""
     now = datetime.now(timezone.utc).isoformat()
     with conn:
@@ -244,8 +358,8 @@ def tombstone_memory(conn: sqlite3.Connection, memory_id: int) -> bool:
             (now, memory_id),
         )
         if cursor.rowcount > 0:
-            # Delete from vec_memories to prevent it matching in vector searches
             conn.execute("DELETE FROM vec_memories WHERE memory_id = ?", (memory_id,))
+            log_memory_event(conn, "TOMBSTONE", memory_id, {"reason": reason})
             return True
         return False
 
@@ -257,7 +371,11 @@ def list_memories(
     limit: int = 50,
 ) -> List[Dict[str, Any]]:
     """Lists memories chronologically with optional category filter."""
-    query = "SELECT id, content, category, importance, created_at, updated_at, is_deleted FROM memories WHERE 1=1"
+    query = """
+        SELECT id, content, category, importance, created_at, updated_at,
+               is_deleted, source, session_id, staleness
+        FROM memories WHERE 1=1
+    """
     params: List[Any] = []
 
     if not include_deleted:
@@ -271,3 +389,60 @@ def list_memories(
 
     cursor = conn.execute(query, params)
     return [dict(row) for row in cursor.fetchall()]
+
+
+def insert_session_checkpoint(
+    conn: sqlite3.Connection,
+    session_id: str,
+    event_type: str,
+    payload: Dict[str, Any],
+    project_root: Optional[str] = None,
+    memory_id: Optional[int] = None,
+) -> int:
+    """Persists a session checkpoint record."""
+    import json
+
+    now = datetime.now(timezone.utc).isoformat()
+    cursor = conn.execute(
+        """
+        INSERT INTO session_checkpoints(
+            session_id, event_type, project_root, payload_json, memory_id, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?)
+        """,
+        (session_id, event_type, project_root, json.dumps(payload), memory_id, now),
+    )
+    checkpoint_id = int(cursor.lastrowid)
+    log_memory_event(
+        conn,
+        "CHECKPOINT",
+        memory_id,
+        {"checkpoint_id": checkpoint_id, "session_id": session_id, "event_type": event_type},
+    )
+    return checkpoint_id
+
+
+def list_session_checkpoints(
+    conn: sqlite3.Connection,
+    project_root: Optional[str] = None,
+    limit: int = 10,
+) -> List[Dict[str, Any]]:
+    """Lists recent session checkpoints, optionally filtered by project root."""
+    import json
+
+    query = """
+        SELECT id, session_id, event_type, project_root, payload_json, memory_id, created_at
+        FROM session_checkpoints
+    """
+    params: List[Any] = []
+    if project_root:
+        query += " WHERE project_root = ?"
+        params.append(project_root)
+    query += " ORDER BY id DESC LIMIT ?"
+    params.append(limit)
+
+    rows = []
+    for row in conn.execute(query, params).fetchall():
+        record = dict(row)
+        record["payload"] = json.loads(record.pop("payload_json"))
+        rows.append(record)
+    return rows
