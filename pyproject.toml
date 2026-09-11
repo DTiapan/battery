@@ -1,0 +1,28 @@
+[project]
+name = "battery"
+version = "0.1.0"
+description = "Sovereign, local-first context engine for AI workflows"
+readme = "README.md"
+authors = [
+    { name = "DTiapan", email = "bakran.ajas@gmail.com" }
+]
+requires-python = ">=3.11"
+dependencies = [
+    "fastembed>=0.8.0",
+    "mcp>=2.2.0",
+    "rich>=15.0.0",
+    "sqlite-vec>=0.1.9",
+    "typer>=0.27.2",
+]
+
+[project.scripts]
+battery = "battery:main"
+
+[build-system]
+requires = ["uv_build>=0.12.10,<0.13.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]

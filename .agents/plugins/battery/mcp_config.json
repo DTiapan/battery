@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "battery": {
+      "command": "uv",
+      "args": [
+        "run",
+        "battery",
+        "serve"
+      ]
+    }
+  }
+}
