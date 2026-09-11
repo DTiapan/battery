@@ -1,7 +1,7 @@
 # 🔋 Battery Context Engine
 
 [![CI](https://github.com/DTiapan/battery/actions/workflows/ci.yml/badge.svg)](https://github.com/DTiapan/battery/actions/workflows/ci.yml)
-[![License: Apache 2.0 / MIT](https://img.shields.io/badge/License-Apache%202.0%20%2F%20MIT-blue.svg)](#-license)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python: 3.11+](https://img.shields.io/badge/Python-3.11%2B-blue.svg)](https://www.python.org/)
 [![MCP: 2.x Compliant](https://img.shields.io/badge/MCP-2.x%20Compliant-green.svg)](https://modelcontextprotocol.io/)
 [![Storage: SQLite WAL + sqlite--vec](https://img.shields.io/badge/Storage-SQLite%20WAL%20%2B%20sqlite--vec-orange.svg)](https://github.com/asg017/sqlite-vec)
@@ -264,9 +264,23 @@ uv run battery sync
 
 ## 🔌 Connecting to AI Assistants via MCP
 
-Battery exposes a Model Context Protocol (MCP) server over standard input/output (Stdio).
+### 1-Click Automated Setup
 
-### Claude Desktop
+Battery can automatically register itself into your installed AI assistants:
+
+```bash
+# Configure both Claude Desktop and Cursor in one shot
+uv run battery setup --client all
+
+# Or target individually:
+uv run battery setup --client claude
+uv run battery setup --client cursor
+```
+
+### Manual Configuration
+
+<details>
+<summary>Claude Desktop Manual Config</summary>
 
 Add this block to your Claude Desktop config (`~/Library/Application Support/Claude/claude_desktop_config.json`):
 
@@ -274,26 +288,23 @@ Add this block to your Claude Desktop config (`~/Library/Application Support/Cla
 {
   "mcpServers": {
     "battery": {
-      "command": "uv",
-      "args": [
-        "--directory",
-        "/path/to/battery",
-        "run",
-        "battery",
-        "serve"
-      ]
+      "command": "battery",
+      "args": ["serve"]
     }
   }
 }
 ```
+</details>
 
-### Cursor
+<details>
+<summary>Cursor Manual Config</summary>
 
 1. Open Cursor Settings (**Cmd + ,**) → Navigate to **Features** → **MCP**.
 2. Click **+ Add New MCP Server**:
    * **Name:** `battery`
    * **Type:** `command`
-   * **Command:** `uv --directory /path/to/battery run battery serve`
+   * **Command:** `battery serve`
+</details>
 
 ### Available MCP Tools Exposed to the Agent
 
@@ -306,25 +317,56 @@ Add this block to your Claude Desktop config (`~/Library/Application Support/Cla
 
 ---
 
+## 📊 Retrieval Evaluation & Reliability Harness
+
+Battery includes a built-in evaluation harness (`battery eval`) to empirically validate retrieval quality across **BM25 (FTS5)**, **Dense Vector (`sqlite-vec`)**, and **Battery Hybrid (RRF)** against realistic developer and agent queries.
+
+### Run the Evaluation Suite
+
+```bash
+uv run battery eval
+```
+
+### Benchmark Results (Golden Evaluation Dataset)
+
+| Retrieval Strategy | Hit@1 | Hit@3 | Hit@5 | MRR | Avg Latency | p50 Latency |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| **BM25 (FTS5)** | 60.0% | 66.7% | 66.7% | 0.6333 | 0.4ms | 0.3ms |
+| **Vector (sqlite-vec)** | 86.7% | 93.3% | 100.0% | 0.9022 | 12.8ms | 12.8ms |
+| **Battery Hybrid (RRF)** | **73.3%** | **93.3%** | **100.0%** | **0.8389** | 13.0ms | 12.8ms |
+
+#### Performance by Query Intent
+
+| Query Intent | Top Method | Hit@3 | Key Insight |
+| :--- | :--- | :---: | :--- |
+| **Exact Keyword** | BM25 / Vector | **100%** | BM25 responds in **0.3ms** for port numbers, package names, and specific identifiers. |
+| **Hybrid Technical** | Vector / Hybrid | **100%** | Combines abstract developer intent with concrete code symbols. |
+| **Semantic Concept** | Battery Hybrid (RRF) | **100%** | Dense embeddings capture conceptual paraphrasing; RRF boosts relevance score to rank #1. |
+
+---
+
 ## 🧪 Verification & Test Suite
 
-Battery is tested with automated unit and integration tests covering SQLite WAL concurrency, FTS5 triggers, vector embeddings, and RRF fusion:
+Battery is tested with automated unit, integration, and CLI smoke tests covering SQLite WAL concurrency, FTS5 triggers, vector embeddings, RRF fusion, and client onboarding:
 
 ```bash
 uv run pytest -v
 ```
 
 ```text
-tests/test_db.py::test_wal_mode_and_pragmas PASSED                       [ 12%]
-tests/test_db.py::test_insert_and_deduplication PASSED                   [ 25%]
-tests/test_db.py::test_tombstone_memory PASSED                           [ 37%]
-tests/test_db.py::test_fts5_trigger_synchronization PASSED               [ 50%]
-tests/test_retrieval.py::test_exact_keyword_retrieval PASSED             [ 62%]
-tests/test_retrieval.py::test_semantic_similarity_retrieval PASSED       [ 75%]
-tests/test_retrieval.py::test_category_filtering PASSED                  [ 87%]
+tests/test_cli.py::test_cli_help PASSED                                  [  9%]
+tests/test_cli.py::test_cli_init_and_add_and_list PASSED                 [ 18%]
+tests/test_db.py::test_wal_mode_and_pragmas PASSED                       [ 27%]
+tests/test_db.py::test_insert_and_deduplication PASSED                   [ 36%]
+tests/test_db.py::test_tombstone_memory PASSED                           [ 45%]
+tests/test_db.py::test_fts5_trigger_synchronization PASSED               [ 54%]
+tests/test_evals.py::test_evaluation_harness_execution PASSED            [ 63%]
+tests/test_retrieval.py::test_exact_keyword_retrieval PASSED             [ 72%]
+tests/test_retrieval.py::test_semantic_similarity_retrieval PASSED       [ 81%]
+tests/test_retrieval.py::test_category_filtering PASSED                  [ 90%]
 tests/test_sync.py::test_export_and_import_cycle PASSED                  [100%]
 
-============================== 8 passed in 1.81s ===============================
+============================== 11 passed in 2.50s ==============================
 ```
 
 ## 👨‍💻 About the Author

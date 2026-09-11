@@ -162,6 +162,104 @@ def serve():
     """Starts the Model Context Protocol (MCP) server over Stdio."""
     run_mcp_server()
 
+@app.command(name="eval")
+def evaluate(
+    dataset_path: Optional[Path] = typer.Option(None, "--dataset", "-d", help="Custom evaluation dataset JSON path"),
+    markdown: bool = typer.Option(True, "--markdown/--no-markdown", help="Generate evals/benchmark_results.md"),
+):
+    """Runs the retrieval evaluation benchmark comparing BM25, Vector, and Hybrid RRF."""
+    from battery.evals.harness import run_evaluation, load_dataset
+    dataset = load_dataset(dataset_path) if dataset_path else None
+    run_evaluation(dataset=dataset, output_markdown=markdown)
+
+@app.command()
+def setup(
+    client: str = typer.Option("all", "--client", "-c", help="Target AI client: 'claude', 'cursor', or 'all'"),
+):
+    """Configures Battery MCP server automatically in Claude Desktop and/or Cursor configs."""
+    import json
+    import os
+    import platform
+    import shutil
+
+    # Determine executable path: prefer 'battery' if on PATH, else absolute uv/python path
+    battery_bin = shutil.which("battery") or "battery"
+
+    configs_updated = []
+    system = platform.system()
+
+    # 1. Claude Desktop config path
+    if client.lower() in ("claude", "all"):
+        if system == "Darwin":
+            claude_path = Path.home() / "Library" / "Application Support" / "Claude" / "claude_desktop_config.json"
+        elif system == "Windows":
+            appdata = os.environ.get("APPDATA", str(Path.home() / "AppData" / "Roaming"))
+            claude_path = Path(appdata) / "Claude" / "claude_desktop_config.json"
+        else:
+            claude_path = Path.home() / ".config" / "Claude" / "claude_desktop_config.json"
+
+        try:
+            claude_path.parent.mkdir(parents=True, exist_ok=True)
+            existing_data: Dict[str, Any] = {}
+            if claude_path.exists():
+                try:
+                    with open(claude_path, "r", encoding="utf-8") as f:
+                        existing_data = json.load(f)
+                except Exception:
+                    existing_data = {}
+
+            if "mcpServers" not in existing_data or not isinstance(existing_data["mcpServers"], dict):
+                existing_data["mcpServers"] = {}
+
+            existing_data["mcpServers"]["battery"] = {
+                "command": battery_bin,
+                "args": ["serve"]
+            }
+
+            with open(claude_path, "w", encoding="utf-8") as f:
+                json.dump(existing_data, f, indent=2)
+
+            configs_updated.append(("Claude Desktop", claude_path))
+        except Exception as e:
+            console.print(f"[yellow]⚠ Could not write Claude Desktop config: {e}[/yellow]")
+
+    # 2. Cursor workspace / global config
+    if client.lower() in ("cursor", "all"):
+        cursor_path = Path.cwd() / ".cursor" / "mcp.json"
+        try:
+            cursor_path.parent.mkdir(parents=True, exist_ok=True)
+            existing_data: Dict[str, Any] = {}
+            if cursor_path.exists():
+                try:
+                    with open(cursor_path, "r", encoding="utf-8") as f:
+                        existing_data = json.load(f)
+                except Exception:
+                    existing_data = {}
+
+            if "mcpServers" not in existing_data or not isinstance(existing_data["mcpServers"], dict):
+                existing_data["mcpServers"] = {}
+
+            existing_data["mcpServers"]["battery"] = {
+                "command": battery_bin,
+                "args": ["serve"]
+            }
+
+            with open(cursor_path, "w", encoding="utf-8") as f:
+                json.dump(existing_data, f, indent=2)
+
+            configs_updated.append(("Cursor (Workspace)", cursor_path))
+        except Exception as e:
+            console.print(f"[yellow]⚠ Could not write Cursor config: {e}[/yellow]")
+
+    if configs_updated:
+        msg = "[bold green]✓ Battery MCP Server configured successfully![/bold green]\n\n"
+        for name, path in configs_updated:
+            msg += f"• [cyan]{name}:[/cyan] [dim]{path}[/dim]\n"
+        msg += f"\nCommand configured: [bold]{battery_bin} serve[/bold]"
+        console.print(Panel.fit(msg, title="1-Click Client Setup"))
+    else:
+        console.print("[red]✗ No client configs were updated.[/red]")
+
 def main():
     app()
 

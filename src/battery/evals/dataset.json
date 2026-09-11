@@ -1,0 +1,186 @@
+{
+  "corpus": [
+    {
+      "id": 1,
+      "category": "rule",
+      "importance": 1.5,
+      "content": "Always use snake_case for Python function and variable names, and PascalCase for class names."
+    },
+    {
+      "id": 2,
+      "category": "rule",
+      "importance": 1.2,
+      "content": "Git commit messages must strictly adhere to the Conventional Commits specification (e.g. feat:, fix:, docs:, chore:)."
+    },
+    {
+      "id": 3,
+      "category": "decision",
+      "importance": 1.4,
+      "content": "Architecture Decision Record 0003: Use SQLite in WAL mode with FTS5 and sqlite-vec for sovereign local storage substrate."
+    },
+    {
+      "id": 4,
+      "category": "decision",
+      "importance": 1.3,
+      "content": "Architecture Decision Record 0004: Standardize on FastEmbed all-MiniLM-L6-v2 ONNX runtime producing 384-dimensional dense vectors."
+    },
+    {
+      "id": 5,
+      "category": "decision",
+      "importance": 1.1,
+      "content": "Decouple stateful memory from stateless LLM compute by serving memory tools over Model Context Protocol (MCP) stdio."
+    },
+    {
+      "id": 6,
+      "category": "general",
+      "importance": 1.0,
+      "content": "Production PostgreSQL cluster operates on port 5432 with a read-replica running on port 5433."
+    },
+    {
+      "id": 7,
+      "category": "general",
+      "importance": 1.0,
+      "content": "Staging Redis instance is accessible on redis-cluster.internal.net:6379 with TLS 1.3 enforced."
+    },
+    {
+      "id": 8,
+      "category": "preference",
+      "importance": 1.2,
+      "content": "User prefers dark mode editor themes and high-contrast color palettes for code syntax highlighting."
+    },
+    {
+      "id": 9,
+      "category": "preference",
+      "importance": 1.3,
+      "content": "Always produce concise, diff-focused explanations without conversational fluff, pleasantries, or preamble."
+    },
+    {
+      "id": 10,
+      "category": "rule",
+      "importance": 1.4,
+      "content": "Security guideline: Never commit API keys, auth tokens, or plaintext credentials into git history."
+    },
+    {
+      "id": 11,
+      "category": "decision",
+      "importance": 1.2,
+      "content": "Architecture Decision Record 0005: Maintain a bi-directional Markdown mirror in BATTERY.md synchronized via SQLite triggers and file watchers."
+    },
+    {
+      "id": 12,
+      "category": "general",
+      "importance": 0.9,
+      "content": "Internal Kubernetes cluster runs on AWS EKS with Calico CNI and Cilium network policies."
+    },
+    {
+      "id": 13,
+      "category": "preference",
+      "importance": 1.1,
+      "content": "Format all markdown documentation with GitHub-flavored markdown alerts (NOTE, TIP, IMPORTANT, WARNING)."
+    },
+    {
+      "id": 14,
+      "category": "rule",
+      "importance": 1.3,
+      "content": "All public Python library interfaces must include complete typing annotations compatible with mypy --strict."
+    },
+    {
+      "id": 15,
+      "category": "decision",
+      "importance": 1.0,
+      "content": "Adopt Reciprocal Rank Fusion (RRF) with smoothing constant k=60 to fuse BM25 and vector search rankings."
+    }
+  ],
+  "queries": [
+    {
+      "query": "What port does the PostgreSQL production database run on?",
+      "type": "exact_keyword",
+      "category": "general",
+      "expected_memory_ids": [6]
+    },
+    {
+      "query": "How should git commit messages be formatted?",
+      "type": "exact_keyword",
+      "category": "rule",
+      "expected_memory_ids": [2]
+    },
+    {
+      "query": "What embedding model and vector dimension are used?",
+      "type": "exact_keyword",
+      "category": "decision",
+      "expected_memory_ids": [4]
+    },
+    {
+      "query": "Where is the Redis cache located and which port does it use?",
+      "type": "exact_keyword",
+      "category": "general",
+      "expected_memory_ids": [7]
+    },
+    {
+      "query": "What are the rules regarding secrets and credentials in version control?",
+      "type": "exact_keyword",
+      "category": "rule",
+      "expected_memory_ids": [10]
+    },
+    {
+      "query": "How do we bridge state across different AI assistants without vendor lock-in?",
+      "type": "semantic_concept",
+      "category": null,
+      "expected_memory_ids": [5]
+    },
+    {
+      "query": "What are the styling and readability visual preferences of the developer?",
+      "type": "semantic_concept",
+      "category": "preference",
+      "expected_memory_ids": [8]
+    },
+    {
+      "query": "How should the AI communicate technical answers to the user?",
+      "type": "semantic_concept",
+      "category": "preference",
+      "expected_memory_ids": [9]
+    },
+    {
+      "query": "What is the ranking algorithm used for combining dense and sparse search scores?",
+      "type": "semantic_concept",
+      "category": "decision",
+      "expected_memory_ids": [15]
+    },
+    {
+      "query": "How are human-readable markdown notes kept in sync with the database?",
+      "type": "semantic_concept",
+      "category": "decision",
+      "expected_memory_ids": [11]
+    },
+    {
+      "query": "Which database engine and vector extension handle our persistent state?",
+      "type": "hybrid_technical",
+      "category": "decision",
+      "expected_memory_ids": [3]
+    },
+    {
+      "query": "What naming casing conventions apply to functions and classes in code?",
+      "type": "hybrid_technical",
+      "category": "rule",
+      "expected_memory_ids": [1]
+    },
+    {
+      "query": "What type checking standards are required for Python signatures?",
+      "type": "hybrid_technical",
+      "category": "rule",
+      "expected_memory_ids": [14]
+    },
+    {
+      "query": "What network security and container infrastructure is used for deployments?",
+      "type": "hybrid_technical",
+      "category": "general",
+      "expected_memory_ids": [12]
+    },
+    {
+      "query": "What visual callout blocks should be used in technical docs?",
+      "type": "hybrid_technical",
+      "category": "preference",
+      "expected_memory_ids": [13]
+    }
+  ]
+}

@@ -8,13 +8,103 @@ from battery.config import DEFAULT_TEXT_WEIGHT, DEFAULT_VEC_WEIGHT, RRF_K
 from battery.db import serialize_vector
 from battery.embeddings import embed_text
 
+STOP_WORDS = {
+    "a", "about", "above", "after", "again", "against", "all", "am", "an", "and",
+    "any", "are", "as", "at", "be", "because", "been", "before", "being",
+    "below", "between", "both", "but", "by", "could", "did", "do", "does",
+    "doing", "down", "during", "each", "few", "for", "from", "further", "had",
+    "has", "have", "having", "he", "her", "here", "hers", "herself", "him",
+    "himself", "his", "how", "i", "if", "in", "into", "is", "it", "its", "itself",
+    "me", "more", "most", "my", "myself", "no", "nor", "not", "of", "off", "on",
+    "once", "only", "or", "other", "ought", "our", "ours", "ourselves", "out",
+    "over", "own", "same", "she", "should", "so", "some", "such", "than", "that",
+    "the", "their", "theirs", "them", "themselves", "then", "there", "these",
+    "they", "this", "those", "through", "to", "too", "under", "until", "up",
+    "very", "was", "we", "were", "what", "when", "where", "which", "while",
+    "who", "whom", "why", "with", "would", "you", "your", "yours", "yourself"
+}
+
 def sanitize_fts5_query(query: str) -> str:
-    """Escapes punctuation and formats alphanumeric tokens for SQLite FTS5."""
-    tokens = re.findall(r"\w+", query)
+    """Escapes punctuation and formats alphanumeric tokens for SQLite FTS5 using BM25 OR matching."""
+    raw_tokens = re.findall(r"\w+", query.lower())
+    content_tokens = [t for t in raw_tokens if t not in STOP_WORDS]
+    tokens = content_tokens or raw_tokens
     if not tokens:
         return '""'
-    # Match each token as a prefix or quoted word
-    return " ".join(f'"{token}"*' for token in tokens)
+    return " OR ".join(f'"{token}"*' for token in tokens)
+
+def search_bm25(
+    conn: sqlite3.Connection,
+    query: str,
+    limit: int = 5,
+    category: Optional[str] = None,
+) -> List[Dict[str, Any]]:
+    """Executes keyword-only search using SQLite FTS5."""
+    query_clean = query.strip()
+    if not query_clean:
+        return []
+    fts_query = sanitize_fts5_query(query_clean)
+    try:
+        sql = """
+            SELECT m.id, m.content, m.category, m.importance, m.created_at, m.updated_at,
+                   f.rank as bm25_score
+            FROM memories_fts f
+            JOIN memories m ON m.id = f.rowid
+            WHERE memories_fts MATCH ? AND m.is_deleted = 0
+        """
+        params: List[Any] = [fts_query]
+        if category:
+            sql += " AND m.category = ?"
+            params.append(category)
+        sql += " ORDER BY f.rank LIMIT ?"
+        params.append(limit)
+
+        cursor = conn.execute(sql, params)
+        results = []
+        for rank_idx, row in enumerate(cursor.fetchall()):
+            record = dict(row)
+            record["score"] = round(-float(record["bm25_score"]), 4)
+            record["rank"] = rank_idx + 1
+            results.append(record)
+        return results
+    except sqlite3.OperationalError:
+        return []
+
+def search_vector(
+    conn: sqlite3.Connection,
+    query: str,
+    limit: int = 5,
+    category: Optional[str] = None,
+) -> List[Dict[str, Any]]:
+    """Executes semantic-only dense vector search using sqlite-vec."""
+    query_clean = query.strip()
+    if not query_clean:
+        return []
+    query_vec = embed_text(query_clean)
+    query_bytes = serialize_vector(query_vec)
+
+    sql = """
+        SELECT m.id, m.content, m.category, m.importance, m.created_at, m.updated_at,
+               v.distance
+        FROM vec_memories v
+        JOIN memories m ON m.id = v.memory_id
+        WHERE v.embedding MATCH ? AND k = ? AND m.is_deleted = 0
+    """
+    params: List[Any] = [query_bytes, limit * 2 if category else limit]
+    if category:
+        sql += " AND m.category = ?"
+        params.append(category)
+    sql += " ORDER BY v.distance ASC LIMIT ?"
+    params.append(limit)
+
+    cursor = conn.execute(sql, params)
+    results = []
+    for rank_idx, row in enumerate(cursor.fetchall()):
+        record = dict(row)
+        record["score"] = round(1.0 - float(record["distance"]), 4)
+        record["rank"] = rank_idx + 1
+        results.append(record)
+    return results
 
 def hybrid_search(
     conn: sqlite3.Connection,
