@@ -9,7 +9,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python: 3.11+](https://img.shields.io/badge/Python-3.11%2B-blue.svg)](https://www.python.org/)
 [![MCP: 2.x](https://img.shields.io/badge/MCP-2.x%20Compliant-green.svg)](https://modelcontextprotocol.io/)
-[![Version: 0.3.0](https://img.shields.io/badge/version-0.3.0-blue.svg)](pyproject.toml)
+[![Version: 0.3.1](https://img.shields.io/badge/version-0.3.1-blue.svg)](pyproject.toml)
 
 **Keywords:** local AI memory · MCP memory server · Cursor context · Claude Code memory · hybrid RAG · coding agent context · stale memory pruning · session checkpoints
 
@@ -133,6 +133,7 @@ Artifacts are written to `.battery/handoff/` in your project. Claude Code `Sessi
 - **Context profiles** — isolate memory per repo or domain
 - **Session checkpoints** — Claude Code lifecycle hooks + `battery checkpoint`
 - **Stale invalidation** — citation verify on recall + `battery prune`
+- **Near-duplicate merge** — semantic dedup on save (cosine ≥ 0.88 → merge, returns `similarTo`)
 - **Health checks** — `battery doctor` for DB, mirror sync, MCP, and hook adoption
 - **Eval harness** — `battery eval` with real-world and stress-test corpora
 
@@ -260,7 +261,7 @@ Full reports: [`realworld_benchmark_report.md`](src/battery/evals/realworld_benc
 ## Development
 
 ```bash
-uv run pytest -v          # 34 tests
+uv run pytest -v          # 41 tests
 uv run battery doctor     # local health check
 ```
 

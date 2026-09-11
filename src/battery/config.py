@@ -44,6 +44,9 @@ RRF_K = 5
 DEFAULT_TEXT_WEIGHT = 0.5
 DEFAULT_VEC_WEIGHT = 0.5
 
+# Near-duplicate merge threshold (cosine similarity). See NEXT-2 in PRODUCT_ROADMAP.md.
+NEAR_DUP_THRESHOLD = 0.88
+
 
 def get_active_profile() -> str:
     """Returns the currently active context profile name."""

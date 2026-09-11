@@ -109,6 +109,12 @@ def add(
         console.print(
             f"[cyan]↺ Restored previously deleted memory [bold]#{mem_id}[/bold] ({category}):[/cyan] {content}"
         )
+    elif status == "merged":
+        similarity = result.get("similarity", 0.0)
+        console.print(
+            f"[cyan]↺ Merged near-duplicate into [bold]#{mem_id}[/bold] "
+            f"(similarTo={mem_id}, similarity={similarity:.3f}):[/cyan] {content}"
+        )
 
 
 @app.command(name="list")

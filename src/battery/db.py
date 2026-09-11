@@ -183,8 +183,16 @@ def insert_memory(
     commit_sha: Optional[str] = None,
     citations: Optional[List[Dict[str, Any]]] = None,
     log_event: bool = True,
+    near_dedup: bool = True,
+    near_dedup_threshold: float | None = None,
 ) -> Dict[str, Any]:
-    """Inserts a memory and its embedding, handling content deduplication."""
+    """Inserts a memory and its embedding, handling exact and near-duplicate deduplication."""
+    from battery.config import NEAR_DUP_THRESHOLD as DEFAULT_NEAR_DUP_THRESHOLD
+    from battery.dedup import find_near_duplicate, merge_near_duplicate
+
+    threshold = (
+        near_dedup_threshold if near_dedup_threshold is not None else DEFAULT_NEAR_DUP_THRESHOLD
+    )
     content_clean = content.strip()
     c_hash = hash_content(content_clean)
     now = datetime.now(timezone.utc).isoformat()
@@ -250,6 +258,29 @@ def insert_memory(
                     {"content_hash": c_hash, "category": category, "source": source},
                 )
             return result
+
+        if near_dedup and category in {"rule", "decision", "preference", "general"}:
+            near_match = find_near_duplicate(
+                conn,
+                embedding,
+                category=category,
+                threshold=threshold,
+            )
+            if near_match:
+                return merge_near_duplicate(
+                    conn,
+                    near_match["id"],
+                    content_clean,
+                    embedding,
+                    category=category,
+                    importance=importance,
+                    source=source,
+                    session_id=session_id,
+                    commit_sha=commit_sha,
+                    citations=citations,
+                    similarity=near_match["similarity"],
+                    log_event=log_event,
+                )
 
         cursor = conn.execute(
             """
