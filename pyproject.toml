@@ -1,7 +1,7 @@
 [project]
 name = "battery"
 version = "0.2.0"
-description = "Sovereign, local-first context engine for AI workflows"
+description = "Local AI memory for coding agents — MCP server with hybrid search and git-committable BATTERY.md"
 readme = "README.md"
 authors = [
     { name = "DTiapan", email = "bakran.ajas@gmail.com" }

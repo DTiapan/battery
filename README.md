@@ -1,202 +1,55 @@
-# 🔋 Battery Context Engine
+# Battery
+
+**Local AI memory for coding agents** — an MCP server with hybrid search, session capture, and a git-committable `BATTERY.md` mirror.
+
+> **Portable project context for Cursor, Claude Code, Claude Desktop, and any MCP client.**  
+> Store architectural decisions and rules on your machine. Recall them with BM25 + vector search. Sync a human-readable mirror to git. No cloud embedding APIs. No external database daemons.
 
 [![CI](https://github.com/DTiapan/battery/actions/workflows/ci.yml/badge.svg)](https://github.com/DTiapan/battery/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python: 3.11+](https://img.shields.io/badge/Python-3.11%2B-blue.svg)](https://www.python.org/)
-[![MCP: 2.x Compliant](https://img.shields.io/badge/MCP-2.x%20Compliant-green.svg)](https://modelcontextprotocol.io/)
-[![Storage: SQLite WAL + sqlite--vec](https://img.shields.io/badge/Storage-SQLite%20WAL%20%2B%20sqlite--vec-orange.svg)](https://github.com/asg017/sqlite-vec)
-[![Inference: Local ONNX (all--MiniLM--L6--v2)](https://img.shields.io/badge/Inference-Local%20ONNX%20(Sub--15ms)-purple.svg)](#-local-inference-engine)
+[![MCP: 2.x](https://img.shields.io/badge/MCP-2.x%20Compliant-green.svg)](https://modelcontextprotocol.io/)
+[![Version: 0.2.0](https://img.shields.io/badge/version-0.2.0-blue.svg)](pyproject.toml)
 
-> **Decouple stateful memory from stateless LLM compute.**  
-> A local-first, low-latency sovereign context engine for polyglot AI workflows (Cursor, Claude Desktop, Gemini, Antigravity) powered by SQLite, ONNX, and the Model Context Protocol (MCP).
+**Keywords:** local AI memory · MCP memory server · Cursor context · Claude Code memory · hybrid RAG · coding agent context · stale memory pruning · session checkpoints
 
 ---
 
-## 🧭 Executive Summary: The Problem We Are Solving
+## What is Battery?
 
-### The "Model Switch Tax" & Context Silos
+Battery is a **local-first memory engine** for AI-assisted software development. It gives your coding agents durable project context — rules, decisions, preferences, and session summaries — that survives tool switches and new sessions.
 
-Modern software engineering with AI is fundamentally polyglot:
-* You plan architecture and system trade-offs in **Claude Desktop**.
-* You implement and refactor code inside **Cursor** or **VS Code**.
-* You audit repositories and perform large-context code reviews in **Gemini**.
+Think of the LLM as the motor and your project context as the **battery pack**: swap tools without re-explaining everything from scratch.
 
-**The Fatal Flaw:** Every AI tool is an isolated, stateless compute silo. Every time you switch models, you pay a heavy **"Model Switch Tax"**:
-1. **Context Evaporation:** You re-explain tech stack decisions, naming conventions, and constraints from scratch.
-2. **Stale Contradictions:** Claude suggests a pattern that Cursor's model doesn't know was deprecated an hour ago.
-3. **The Static Workaround Failure:** Developers resort to manually maintaining static files like `CLAUDE.md` or `.cursorrules`. These files quickly become outdated, cannot be searched semantically, and bloat the LLM's context window on every prompt.
-4. **The Privacy & Black-Box Trap:** Cloud-hosted memory engines (e.g., ChatGPT Memory, Mem0 cloud) lock your proprietary architectural decisions in third-party servers with opaque recall heuristics, subscription costs, and vendor lock-in.
+| You get | How |
+|--------|-----|
+| Semantic + keyword recall | Hybrid BM25 (FTS5) + dense vectors fused with RRF |
+| Human-readable audit trail | Auto-synced `BATTERY.md` you can commit to git |
+| Polyglot tool support | MCP tools, resources, and prompts for any MCP client |
+| Session lifecycle capture | Claude Code hooks on session end and pre-compaction |
+| Context rot protection | JIT citation verify on recall + `battery prune` for stale paths |
+| Per-project isolation | Named context profiles (`battery profile create`) |
 
----
-
-## ⚡ The Core Philosophy
-
-> **In AI systems engineering, LLMs are commodity compute; your domain context, architectural decisions, and project rules are the sovereign asset.**
-
-Battery treats context as a **rechargeable, portable, git-committable battery pack**. It runs locally on your machine, requires zero external database daemons, calls zero cloud embedding APIs, and plugs seamlessly into any AI assistant via the open **Model Context Protocol (MCP)**.
+Storage is a single SQLite file (`battery.db`) with WAL mode, FTS5, and [`sqlite-vec`](https://github.com/asg017/sqlite-vec). Embeddings run locally via ONNX (`all-MiniLM-L6-v2`, ~12ms on CPU).
 
 ---
 
-## 🏛️ Systems Design Thinking & Technical Deep-Dive
+## The problem
 
-Battery was engineered from the ground up by examining proven systems primitives (SQLite WAL, Git Merkle DAGs, Reciprocal Rank Fusion, W-TinyLFU) and deliberately evaluating trade-offs.
+Developers using multiple AI tools hit the same walls:
 
-```text
-┌───────────────────────────────────────────────────────────────────────────────────────┐
-│                                 AI CLIENTS & AGENTS                                   │
-│            [Cursor IDE]           [Claude Desktop]            [Gemini CLI]            │
-└───────────────────────────────────────────┬───────────────────────────────────────────┘
-                                            │ (Model Context Protocol / Stdio)
-                                            ▼
-┌───────────────────────────────────────────────────────────────────────────────────────┐
-│                               BATTERY MCP SERVER LAYER                                │
-│       recall_memory()   •   save_memory()   •   list_memories()   •   forget()        │
-└───────────────────────────┬───────────────────────────┬───────────────────────────────┘
-                            │                                           │
-                            ▼                                           ▼
-┌───────────────────────────────────────────────────────┐   ┌───────────────────────────┐
-│                 CORE HYBRID RETRIEVAL                 │   │    HUMAN LIVING MIRROR    │
-│  • Local ONNX Embedder (all-MiniLM-L6-v2, 384-dim)    │   │        BATTERY.md         │
-│  • Keyword BM25 Ranking + Vector Cosine Distance      │   │  • Bidirectional sync     │
-│  • Reciprocal Rank Fusion (RRF Scorer, k=5, tuned)    │   └─────────────▲─────────────┘
-└───────────────────────────┬───────────────────────────┘   └─────────────▲─────────────┘
-                            │                                             │
-                            ▼                                             │ (auto-sync)
-┌─────────────────────────────────────────────────────────────────────────┴─────────────┐
-│                        PRIMARY STORAGE SUBSTRATE (SQLite WAL)                         │
-│     [memories (Relational)]   •   [memories_fts (BM25)]   •   [vec_memories (vec0)]   │
-└───────────────────────────────────────────────────────────────────────────────────────┘
-```
+1. **Session amnesia** — every new chat re-explains stack choices, conventions, and constraints.
+2. **Context silos** — Cursor doesn't know what Claude decided an hour ago.
+3. **Static file rot** — `CLAUDE.md` and `.cursorrules` drift, can't be searched semantically, and bloat every prompt.
+4. **Cloud memory lock-in** — hosted memory services store proprietary context on third-party servers.
 
-<details>
-<summary><b>View Interactive Mermaid Flowchart</b></summary>
-
-```mermaid
-flowchart TD
-    subgraph Clients["AI Clients & Interfaces"]
-        Cursor["Cursor IDE"]
-        Claude["Claude Desktop"]
-        Gemini["Gemini Agent"]
-        CLI["Terminal CLI"]
-    end
-
-    subgraph Protocol["Protocol Layer"]
-        Stdio["Stdio Transport (JSON-RPC)"]
-        MCPServer["Battery MCP Server"]
-    end
-
-    subgraph Engine["Battery Core Engine"]
-        Retriever["Hybrid Retrieval (RRF k=5, tuned)"]
-        Embedder["Local ONNX Embedder (384-dim)"]
-        SyncEngine["Sync Engine"]
-    end
-
-    subgraph Storage["Storage Substrate (SQLite WAL)"]
-        MemTable["memories (Base Table)"]
-        FTS5Table["memories_fts (FTS5 BM25)"]
-        VecTable["vec_memories (sqlite-vec)"]
-    end
-
-    subgraph Mirror["Human Sovereign Layer"]
-        MDFile["BATTERY.md (Living Mirror)"]
-    end
-
-    Cursor --> Stdio
-    Claude --> Stdio
-    Gemini --> Stdio
-    CLI --> MCPServer
-    Stdio --> MCPServer
-
-    MCPServer --> Retriever
-    MCPServer --> Embedder
-    Embedder --> Storage
-
-    Retriever --> FTS5Table
-    Retriever --> VecTable
-    Retriever --> MemTable
-
-    MCPServer --> SyncEngine
-    SyncEngine --> MDFile
-    MDFile -.-> SyncEngine
-    SyncEngine -.-> Storage
-```
-
-</details>
+Battery keeps memory **on your machine**, searchable, versionable, and pluggable into any MCP-native agent.
 
 ---
 
-### 1. Why Hybrid Retrieval (BM25 + Dense Vector + RRF)?
+## Quick start
 
-Relying exclusively on dense vector search is one of the most common failure modes in modern AI systems:
-* **The Vector Failure Mode:** High-dimensional embeddings smear exact technical tokens. If you search for `port 5432`, `PRAGMA journal_mode`, or a specific function name like `handle_auth_callback`, vector cosine similarity often returns conceptually related but factually incorrect chunks.
-* **The Keyword Failure Mode:** Traditional BM25 keyword search completely misses semantic intent. A query like *"how do we handle database replication?"* fails if the saved decision only mentions *"WAL streaming to replica nodes"*.
-
-#### The Solution: Reciprocal Rank Fusion (RRF)
-Battery runs both searches simultaneously against SQLite and fuses the ranked lists using Reciprocal Rank Fusion with $k=5$ (empirically tuned on real engineering memories — see [`rrf_tuning_report.md`](src/battery/evals/rrf_tuning_report.md)):
-
-$$\text{RRF}(d) = \frac{w_{\text{text}}}{5 + r_{\text{bm25}}(d)} + \frac{w_{\text{vec}}}{5 + r_{\text{vec}}(d)}$$
-
-```text
-RRF_Score(d) = (w_text / (5 + rank_bm25(d))) + (w_vec / (5 + rank_vec(d)))
-```
-
-Where $w_{\text{text}} = 0.5$ and $w_{\text{vec}} = 0.5$. The lower $k=5$ (vs the academic default $k=60$) gives rank positions stronger signal for short factual assertions, achieving MRR=0.8583 on 92 real engineering memories.
-
----
-
-### 2. Why SQLite in WAL Mode (Zero-Dependency Substrate)?
-
-Rather than demanding that developers spin up external vector databases (e.g. Qdrant, Milvus, Chroma servers, or Redis):
-* **Single-File Portability:** Everything lives in `battery.db`, readable by any tool on earth.
-* **Concurrency with WAL:** Write-Ahead Logging (`PRAGMA journal_mode = WAL;`) enables concurrent readers without blocking writes.
-* **In-Process Performance:** Zero network overhead, zero port conflicts, sub-millisecond query execution.
-* **Native Vector Extensions:** Powered by [`sqlite-vec`](https://github.com/asg017/sqlite-vec), bringing SIMD-accelerated float32 vector distance calculations directly into SQL queries.
-
----
-
-### 3. Local ONNX Embeddings (Zero Cloud API Dependencies)
-
-* **Model:** `sentence-transformers/all-MiniLM-L6-v2` (384 dimensions).
-* **Runtime:** CPU-optimized ONNX Runtime via `fastembed` with AVX2/NEON SIMD acceleration.
-* **Performance:** **~12ms per embedding on consumer laptop CPUs**.
-* **Footprint:** ~90MB cached model weights. Zero GPU required. Zero API costs. 100% offline.
-
----
-
-### 4. The Living Markdown Mirror (`BATTERY.md`)
-
-Binary databases create developer mistrust: *"What did the agent remember? Can I delete an incorrect rule?"*
-
-Battery introduces the **Living Mirror pattern**:
-1. When a memory is saved in SQLite, the engine immediately formats and writes an atomic, human-readable [`BATTERY.md`](BATTERY.md) file grouped by categories (`Rules & Constraints`, `Architectural Decisions`, `User Preferences`).
-2. **Git-Native:** You commit `BATTERY.md` to GitHub. Teammates cloning the repo inherit project memory instantly. Pull requests can review changes to project rules.
-3. **Bidirectional Sync:** Edit `BATTERY.md` directly in your editor, run `battery sync`, and the engine detects diffs, re-embeds changes, and updates SQLite.
-
----
-
-## 🏛️ Architecture Decision Records (ADRs)
-
-To enforce engineering rigor and avoid architectural drift, every major system decision is documented under [`docs/adr/`](docs/adr) following the MADR standard:
-
-| ADR | Decision | Architectural Rationale |
-| :--- | :--- | :--- |
-| **[ADR 0001](docs/adr/0001-record-architecture-decisions.md)** | **Record Architecture Decisions** | Standardizes MADR records to keep system design trade-offs transparent and permanent. |
-| **[ADR 0002](docs/adr/0002-phased-runtime-stack.md)** | **Phased Implementation Stack** | **Phase 1 (V1):** Python 3.12+ with `uv` for rapid validation. **Phase 2 (V2):** Standalone compiled Go 1.24+ daemon. |
-| **[ADR 0003](docs/adr/0003-storage-and-retrieval-engine.md)** | **Storage Substrate & Hybrid RRF** | Zero-dependency SQLite in WAL mode; **FTS5** (BM25) + **`sqlite-vec`** (cosine) fused via **RRF** ($k=60$). |
-| **[ADR 0004](docs/adr/0004-embedding-strategy-and-vector-pipeline.md)** | **Local Embedding Pipeline** | Offline ONNX Runtime (`all-MiniLM-L6-v2`, 384-dim, sub-15ms inference) over cloud embedding APIs. |
-| **[ADR 0005](docs/adr/0005-mcp-interface-and-living-markdown-mirror.md)** | **MCP Interface & Living Mirror** | Standard MCP 2.x server over Stdio + bidirectional `BATTERY.md` sync. |
-
-*Additional architectural whitepapers live in [`docs/design/`](docs/design), including our [Systems Brainstorming Matrix](docs/design/systems-brainstorming.md) and [Cross-Verification Audit](docs/design/cross-verification-audit.md).*
-
----
-
-## 🚀 Quickstart & Installation
-
-### Prerequisites
-* Python 3.11+
-* [`uv`](https://github.com/astral-sh/uv) (Extremely fast Python package installer)
-
-### 1. Installation
+### Install
 
 ```bash
 git clone https://github.com/DTiapan/battery.git
@@ -204,106 +57,84 @@ cd battery
 uv sync
 ```
 
-### 2. Initialize in Any Project
+Requires **Python 3.11+** and [`uv`](https://github.com/astral-sh/uv).
+
+### Initialize in your project
 
 ```bash
+cd /path/to/your/project
 uv run battery init
 ```
-*Creates the SQLite database and scaffolds your local `BATTERY.md` mirror.*
 
-### 3. Save Decisions & Project Rules
+Creates `battery.db` and scaffolds `BATTERY.md`.
 
-```bash
-# Save an architectural decision
-uv run battery add "Use SQLite in WAL mode with sqlite-vec for hybrid storage" -c decision
-
-# Save a coding rule
-uv run battery add "All Python functions must include type annotations and docstrings" -c rule
-
-# Save a developer preference
-uv run battery add "User prefers dark mode and concise, functional code snippets" -c preference
-```
-
-### 4. Search Context (Hybrid BM25 + Vector)
+### Save and recall context
 
 ```bash
+# Save memories by category
+uv run battery add "Use SQLite WAL + sqlite-vec for hybrid storage" -c decision
+uv run battery add "All Python functions need type hints" -c rule
+
+# Hybrid search (BM25 + vector + RRF)
 uv run battery query "python typing guidelines"
 ```
 
-Output:
-```text
-Hybrid Search Results for: 'python typing guidelines'
-┏━━━━━━━━━━━━━┳━━━━┳━━━━━━━━━━┳━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-┃ Score (RRF) ┃ ID ┃ Category ┃ BM25 / Vec Rank ┃ Content                                        ┃
-┡━━━━━━━━━━━━━╇━━━━╇━━━━━━━━━━╇━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
-│      0.0082 │  2 │ rule     │ #- / #1         │ All Python functions must include type         │
-│             │    │          │                 │ annotations and docstrings                     │
-└─────────────┴────┴──────────┴─────────────────┴━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┘
-```
-
-### 5. Inspect the Living Mirror (`BATTERY.md`)
-
-```markdown
-# Battery Context Engine — Living Memory Mirror
-
-## Active Rules & Constraints
-
-- **[ID:2]** All Python functions must include type annotations and docstrings
-
-## Architectural Decisions
-
-- **[ID:1]** Use SQLite in WAL mode with sqlite-vec for hybrid storage
-```
-
-Edit `BATTERY.md` directly in your editor, add new rules, and sync back to SQLite:
-```bash
-uv run battery sync
-```
-
-### 6. Multi-Battery Context Profiles (Per-Project Isolation)
-
-Isolate rules and architectural decisions across different repositories, domains, and clients so contexts never collide:
+### Connect to Cursor or Claude Desktop
 
 ```bash
-# Create an isolated context profile
-uv run battery profile create payments-service
+uv run battery setup --client all
+# or: --client cursor | --client claude
+```
 
-# Switch active profile globally (shorthand: uv run battery use <name>)
-uv run battery use payments-service
+Then use MCP tools in chat: `recall_memory`, `save_memory`, `list_memories`, `forget_memory`.
 
-# Add memories specifically scoped to this profile
-uv run battery add "PCI-DSS rule: cardholder data must never be logged" -c rule
+### Auto-capture sessions (Claude Code)
 
-# Inspect all profiles and active indicator
-uv run battery profile list
+```bash
+uv run battery hook install --scope project
+uv run battery doctor --adoption
+```
 
-# Launch an MCP server bound to a specific profile for Claude/Cursor
-uv run battery serve --profile payments-service
+Hooks fire on **SessionEnd** and **PreCompact**, writing episodic checkpoints you can inspect:
+
+```bash
+uv run battery checkpoint list
+uv run battery checkpoint show --latest
+```
+
+Prune memories that reference deleted files:
+
+```bash
+uv run battery prune --dry-run
+uv run battery prune
 ```
 
 ---
 
-## 🔌 Connecting to AI Assistants via MCP
+## Features (v0.2)
 
-### 1-Click Automated Setup
+- **Hybrid retrieval** — BM25 + vector cosine similarity, fused with tuned RRF (k=5)
+- **Living mirror** — bidirectional sync between SQLite and `BATTERY.md`
+- **MCP server** — tools, `battery://context` / `battery://rules` resources, `battery-context` prompt
+- **Context profiles** — isolate memory per repo or domain
+- **Session checkpoints** — Claude Code lifecycle hooks + `battery checkpoint`
+- **Stale invalidation** — citation verify on recall + `battery prune`
+- **Health checks** — `battery doctor` for DB, mirror sync, MCP, and hook adoption
+- **Eval harness** — `battery eval` with real-world and stress-test corpora
 
-Battery can automatically register itself into your installed AI assistants:
+---
+
+## Connect to AI assistants
+
+### Automated setup
 
 ```bash
-# Configure both Claude Desktop and Cursor in one shot
 uv run battery setup --client all
-
-# Or target individually:
-uv run battery setup --client claude
-uv run battery setup --client cursor
 ```
 
-### Manual Configuration
+### Manual MCP config (Claude Desktop)
 
-<details>
-<summary>Claude Desktop Manual Config</summary>
-
-Add this block to your Claude Desktop config (`~/Library/Application Support/Claude/claude_desktop_config.json`):
+Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 
 ```json
 {
@@ -315,136 +146,134 @@ Add this block to your Claude Desktop config (`~/Library/Application Support/Cla
   }
 }
 ```
-</details>
 
-<details>
-<summary>Cursor Manual Config</summary>
+### Cursor
 
-1. Open Cursor Settings (**Cmd + ,**) → Navigate to **Features** → **MCP**.
-2. Click **+ Add New MCP Server**:
-   * **Name:** `battery`
-   * **Type:** `command`
-   * **Command:** `battery serve`
-</details>
+Settings → Features → MCP → Add server: command `battery serve`.
 
-### Available MCP Tools Exposed to the Agent
+### Profile-scoped server
+
+```bash
+uv run battery profile create payments-service
+uv run battery use payments-service
+uv run battery serve --profile payments-service
+```
+
+### MCP surface
 
 | Tool | Purpose |
-| :--- | :--- |
-| `recall_memory(query, limit=5, category=None)` | Hybrid search over rules and architectural decisions before answering. |
-| `save_memory(content, category="general", importance=1.0)` | Persists user-stated rules or decisions established during chat. |
-| `list_memories(category=None, limit=20)` | Browses stored project context. |
-| `forget_memory(memory_id)` | Tombstones stale or deprecated rules. |
+|------|---------|
+| `recall_memory(query, limit, category)` | Hybrid search before answering |
+| `save_memory(content, category, importance, file_paths?)` | Persist rules, decisions, citations |
+| `list_memories(category, limit)` | Browse stored context |
+| `forget_memory(memory_id)` | Tombstone stale entries |
 
-### Available MCP Resources (Proactive Context Injection)
+| Resource | Purpose |
+|----------|---------|
+| `battery://context` | Active rules, decisions, preferences |
+| `battery://rules` | Constraints and architectural rules only |
 
-Clients like Claude Desktop or Cursor can attach or read these resources to auto-inject sovereign memory at session start without waiting for the agent to call tools:
-
-| Resource URI | Description |
-| :--- | :--- |
-| `battery://context` | Curated active context grouped by Rules, Decisions, Preferences, and General notes. |
-| `battery://rules` | Active sovereign project rules and architectural constraints only. |
-
-### Available MCP Prompts (Session Initialization)
-
-| Prompt Name | Arguments | Purpose |
-| :--- | :--- | :--- |
-| `battery-context` | `task: str = ""` | Injects memory directives, active constraints, and RRF task-relevant memories into the conversation. |
+| Prompt | Purpose |
+|--------|---------|
+| `battery-context` | Inject task-relevant memory at session start |
 
 ---
 
-## 📊 Retrieval Evaluation & Reliability Harness
+## CLI reference
 
-Battery includes a built-in evaluation harness (`battery eval`) to empirically validate retrieval quality across **BM25 (FTS5)**, **Dense Vector (`sqlite-vec`)**, and **Battery Hybrid (RRF)** against realistic developer and agent queries.
-
-### Run the Evaluation Suite
-
-```bash
-uv run battery eval
-```
-
-### Benchmark Results
-
-**Real-World Corpus** (92 genuine engineering memories from Battery's own ADRs, README, and curated rules — 30 authentic developer queries, `battery eval --real`):
-
-| Retrieval Strategy | Hit@1 | Hit@3 | Hit@5 | MRR | p50 Latency |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| **BM25 (FTS5)** | 73.3% | 86.7% | 86.7% | 0.7944 | 0.6ms |
-| **Vector (sqlite-vec)** | 76.7% | 90.0% | 93.3% | 0.8289 | 13.8ms |
-| **🔋 Battery Hybrid (RRF k=5)** | **83.3%** | **83.3%** | **93.3%** | **0.8583** | 14.4ms |
-
-> Hybrid **beats both** BM25 and Vector on real-world data (+3.3% Hit@1, +3.5% MRR vs Vector).
-> RRF k=5 was empirically selected over the academic default k=60 via a 30-combination grid sweep.
-
-#### Performance by Query Intent (Real-World Corpus)
-
-| Query Intent | Top Method | Hit@1 | Key Insight |
-| :--- | :--- | :---: | :--- |
-| **Exact Keyword** | **Hybrid / BM25 (tie)** | **100%** | Both surface exact tokens perfectly; Hybrid adds semantic re-ranking. |
-| **Hybrid Technical** | **Vector / Hybrid** | **80%** | Combining abstract intent with concrete symbols favours dense embeddings. |
-| **Semantic Concept** | **Hybrid / BM25** | **70%** | Conceptual queries benefit from BM25's exact-match anchoring in RRF fusion. |
+| Command | Description |
+|---------|-------------|
+| `battery init` | Create DB + `BATTERY.md` in current project |
+| `battery add "..." -c rule\|decision\|preference` | Save a memory |
+| `battery query "..."` | Hybrid search with scored results |
+| `battery list` | Show active memories |
+| `battery sync` | Import edits from `BATTERY.md` into SQLite |
+| `battery forget <id>` | Tombstone a memory |
+| `battery serve` | Start MCP server (stdio) |
+| `battery setup --client all` | Register MCP in Cursor / Claude |
+| `battery profile create\|list` | Manage context profiles |
+| `battery use <profile>` | Switch active profile |
+| `battery hook install\|uninstall` | Claude Code lifecycle hooks |
+| `battery checkpoint list\|show` | Inspect session checkpoints |
+| `battery prune [--dry-run]` | Remove stale file-cited memories |
+| `battery doctor [--adoption]` | Health and setup diagnostics |
+| `battery eval [--real]` | Run retrieval benchmarks |
 
 ---
 
-## 🧪 Verification & Test Suite
-
-Battery is tested with automated unit, integration, and CLI smoke tests covering SQLite WAL concurrency, FTS5 triggers, vector embeddings, RRF fusion, and client onboarding:
-
-```bash
-uv run pytest -v
-```
+## How it works
 
 ```text
-tests/test_cli.py::test_cli_help PASSED                                  [  9%]
-tests/test_cli.py::test_cli_init_and_add_and_list PASSED                 [ 18%]
-tests/test_db.py::test_wal_mode_and_pragmas PASSED                       [ 27%]
-tests/test_db.py::test_insert_and_deduplication PASSED                   [ 36%]
-tests/test_db.py::test_tombstone_memory PASSED                           [ 45%]
-tests/test_db.py::test_fts5_trigger_synchronization PASSED               [ 54%]
-tests/test_evals.py::test_evaluation_harness_execution PASSED            [ 63%]
-tests/test_retrieval.py::test_exact_keyword_retrieval PASSED             [ 72%]
-tests/test_retrieval.py::test_semantic_similarity_retrieval PASSED       [ 81%]
-tests/test_retrieval.py::test_category_filtering PASSED                  [ 90%]
-tests/test_sync.py::test_export_and_import_cycle PASSED                  [100%]
-
-============================== 11 passed in 2.50s ==============================
+  Cursor / Claude / Gemini / CLI
+              │
+              ▼  MCP (stdio)
+  ┌───────────────────────────┐
+  │  recall · save · forget   │
+  └───────────┬───────────────┘
+              │
+     ┌────────┴────────┐
+     ▼                 ▼
+ Hybrid RRF         BATTERY.md
+ BM25 + Vector      (git mirror)
+     │
+     ▼
+ SQLite WAL · FTS5 · sqlite-vec · local ONNX embeddings
 ```
 
-## 👨‍💻 About the Author
+**Why hybrid search?** Vectors miss exact tokens (`port 5432`, function names). BM25 misses semantic intent. Battery runs both and fuses ranks with Reciprocal Rank Fusion — tuned on real engineering memories ([RRF report](src/battery/evals/rrf_tuning_report.md)).
 
-**Ajas Bakran**  
-*AI Systems Engineer | AI Agent Evaluation & Reliability*  
-*Senior Engineering Lead | AI Evaluation & LLM Systems | Reliability Engineering for AI Agents*
+**Why SQLite?** Single-file portability, WAL concurrency, zero network latency, no Redis/Qdrant/Chroma server to run.
 
-> *"Building AI systems that can be tested, measured, observed, and trusted — not just systems that produce impressive demos."*
-
-I build and evaluate production-style AI systems, with a focus on AI agents, evaluation frameworks, context engineering, RAG systems, and production reliability.
-
-### 📬 Connect & Content
-
-* **GitHub:** [github.com/DTiapan](https://github.com/DTiapan)
-* **LinkedIn:** [linkedin.com/in/ajasbakran](https://linkedin.com/in/ajasbakran)
-* **Weekly Newsletter — Grow with AI:** [growithai.substack.com](https://growithai.substack.com/)
-* **YouTube — Grow with AI:** [youtube.com/@grow_with_ai_now](https://www.youtube.com/@grow_with_ai_now)
-* **Email:** [bakran.ajas@gmail.com](mailto:bakran.ajas@gmail.com)
-* **LinkedIn:** [linkedin.com/in/ajasbakran](https://linkedin.com/in/ajasbakran)
+Deep dives: [Architecture Decision Records](docs/adr/) · [Product roadmap](docs/roadmap/PRODUCT_ROADMAP.md) · [Systems design notes](docs/design/)
 
 ---
 
-## 🤝 Work With Me — Advisory & Technical Consulting
+## Retrieval benchmarks
 
-I advise high-growth engineering teams and consult on **production-grade AI systems, agent evaluation, and reliability infrastructure**.
+Real-world corpus (92 engineering memories, 30 developer queries — `battery eval --real`):
 
-### Areas of Engagement:
-* **AI Agent Reliability & Evaluation:** Building regression test harnesses, trajectory-based evaluation suites, tool-calling validation, and LLM-as-a-judge scoring frameworks to make agentic workflows measurable, observable, and dependable.
-* **Context Engineering & Memory Architectures:** Designing high-performance local context substrates, multi-agent context synchronization, hybrid search ranking, and MCP tool protocols.
-* **Production AI Readiness & Safety:** Red-teaming, prompt injection resilience, failure taxonomy analysis, and latency optimization for enterprise deployment.
-* **Fractional AI Systems Architect / Technical Advisory:** Strategic architectural guidance for engineering leadership building complex LLM and multi-agent platforms.
+| Strategy | Hit@1 | MRR | p50 latency |
+|----------|------:|----:|------------:|
+| BM25 (FTS5) | 73.3% | 0.79 | 0.6ms |
+| Vector (sqlite-vec) | 76.7% | 0.83 | 13.8ms |
+| **Battery hybrid (RRF)** | **83.3%** | **0.86** | 14.4ms |
 
-> **Let's Connect:** Reach out directly via [LinkedIn](https://linkedin.com/in/ajasbakran) or email at [bakran.ajas@gmail.com](mailto:bakran.ajas@gmail.com) with details on your team's goals.
+Full reports: [`realworld_benchmark_report.md`](src/battery/evals/realworld_benchmark_report.md) · [`stress_test_report.md`](src/battery/evals/stress_test_report.md)
 
 ---
 
-## 📜 License
+## Development
 
-This project is licensed under the **Apache-2.0** / **MIT** dual license. Open source and free for individuals and organizations.
+```bash
+uv run pytest -v          # 27 tests
+uv run battery doctor     # local health check
+```
+
+---
+
+## Documentation
+
+| Doc | Contents |
+|-----|----------|
+| [Product roadmap](docs/roadmap/PRODUCT_ROADMAP.md) | Priorities, market validation, v0.2+ plan |
+| [ADRs](docs/adr/) | Storage, retrieval, MCP, profiles, runtime stack |
+| [Master spec](docs/design/battery-master-spec.md) | Full system specification |
+| [BATTERY.md example](BATTERY.md) | Living mirror format |
+
+---
+
+## Author
+
+**Ajas Bakran** — AI systems engineer focused on agent evaluation, context engineering, and production reliability.
+
+- GitHub: [github.com/DTiapan](https://github.com/DTiapan)
+- LinkedIn: [linkedin.com/in/ajasbakran](https://linkedin.com/in/ajasbakran)
+- Newsletter: [growithai.substack.com](https://growithai.substack.com/)
+
+Advisory and consulting on AI agent reliability, memory architectures, and MCP integrations — [get in touch](mailto:bakran.ajas@gmail.com).
+
+---
+
+## License
+
+[MIT](LICENSE)
