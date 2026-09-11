@@ -1,5 +1,8 @@
 import re
-import sqlite3
+try:
+    import pysqlite3 as sqlite3
+except ImportError:
+    import sqlite3
 from typing import Any, Dict, List, Optional
 from battery.config import DEFAULT_TEXT_WEIGHT, DEFAULT_VEC_WEIGHT, RRF_K
 from battery.db import serialize_vector

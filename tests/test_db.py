@@ -1,4 +1,7 @@
-import sqlite3
+try:
+    import pysqlite3 as sqlite3
+except ImportError:
+    import sqlite3
 import pytest
 from battery.db import (
     get_connection,

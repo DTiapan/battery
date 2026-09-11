@@ -1,10 +1,14 @@
 import hashlib
-import sqlite3
 import struct
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 import sqlite_vec
+
+try:
+    import pysqlite3 as sqlite3
+except ImportError:
+    import sqlite3
 
 from battery.config import DEFAULT_DB_PATH, EMBEDDING_DIM
 
@@ -17,7 +21,8 @@ def get_connection(db_path: Path = DEFAULT_DB_PATH) -> sqlite3.Connection:
     db_path.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(str(db_path), check_same_thread=False)
     conn.row_factory = sqlite3.Row
-    conn.enable_load_extension(True)
+    if hasattr(conn, "enable_load_extension"):
+        conn.enable_load_extension(True)
     sqlite_vec.load(conn)
     
     # Performance and concurrency pragmas

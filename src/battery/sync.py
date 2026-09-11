@@ -1,5 +1,8 @@
 import re
-import sqlite3
+try:
+    import pysqlite3 as sqlite3
+except ImportError:
+    import sqlite3
 from pathlib import Path
 from typing import Dict, List
 from battery.config import DEFAULT_BATTERY_MD_PATH
