@@ -1,5 +1,5 @@
-import pytest
-from battery.evals.harness import run_evaluation, load_dataset
+from battery.evals.harness import load_dataset, run_evaluation
+
 
 def test_evaluation_harness_execution():
     """Validates that the evaluation harness runs end-to-end and returns benchmark metrics."""

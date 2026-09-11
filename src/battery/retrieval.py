@@ -1,28 +1,140 @@
 import re
+
 try:
     import pysqlite3 as sqlite3
 except ImportError:
     import sqlite3
 from typing import Any, Dict, List, Optional
+
 from battery.config import DEFAULT_TEXT_WEIGHT, DEFAULT_VEC_WEIGHT, RRF_K
 from battery.db import serialize_vector
 from battery.embeddings import embed_text
 
 STOP_WORDS = {
-    "a", "about", "above", "after", "again", "against", "all", "am", "an", "and",
-    "any", "are", "as", "at", "be", "because", "been", "before", "being",
-    "below", "between", "both", "but", "by", "could", "did", "do", "does",
-    "doing", "down", "during", "each", "few", "for", "from", "further", "had",
-    "has", "have", "having", "he", "her", "here", "hers", "herself", "him",
-    "himself", "his", "how", "i", "if", "in", "into", "is", "it", "its", "itself",
-    "me", "more", "most", "my", "myself", "no", "nor", "not", "of", "off", "on",
-    "once", "only", "or", "other", "ought", "our", "ours", "ourselves", "out",
-    "over", "own", "same", "she", "should", "so", "some", "such", "than", "that",
-    "the", "their", "theirs", "them", "themselves", "then", "there", "these",
-    "they", "this", "those", "through", "to", "too", "under", "until", "up",
-    "very", "was", "we", "were", "what", "when", "where", "which", "while",
-    "who", "whom", "why", "with", "would", "you", "your", "yours", "yourself"
+    "a",
+    "about",
+    "above",
+    "after",
+    "again",
+    "against",
+    "all",
+    "am",
+    "an",
+    "and",
+    "any",
+    "are",
+    "as",
+    "at",
+    "be",
+    "because",
+    "been",
+    "before",
+    "being",
+    "below",
+    "between",
+    "both",
+    "but",
+    "by",
+    "could",
+    "did",
+    "do",
+    "does",
+    "doing",
+    "down",
+    "during",
+    "each",
+    "few",
+    "for",
+    "from",
+    "further",
+    "had",
+    "has",
+    "have",
+    "having",
+    "he",
+    "her",
+    "here",
+    "hers",
+    "herself",
+    "him",
+    "himself",
+    "his",
+    "how",
+    "i",
+    "if",
+    "in",
+    "into",
+    "is",
+    "it",
+    "its",
+    "itself",
+    "me",
+    "more",
+    "most",
+    "my",
+    "myself",
+    "no",
+    "nor",
+    "not",
+    "of",
+    "off",
+    "on",
+    "once",
+    "only",
+    "or",
+    "other",
+    "ought",
+    "our",
+    "ours",
+    "ourselves",
+    "out",
+    "over",
+    "own",
+    "same",
+    "she",
+    "should",
+    "so",
+    "some",
+    "such",
+    "than",
+    "that",
+    "the",
+    "their",
+    "theirs",
+    "them",
+    "themselves",
+    "then",
+    "there",
+    "these",
+    "they",
+    "this",
+    "those",
+    "through",
+    "to",
+    "too",
+    "under",
+    "until",
+    "up",
+    "very",
+    "was",
+    "we",
+    "were",
+    "what",
+    "when",
+    "where",
+    "which",
+    "while",
+    "who",
+    "whom",
+    "why",
+    "with",
+    "would",
+    "you",
+    "your",
+    "yours",
+    "yourself",
 }
+
 
 def sanitize_fts5_query(query: str) -> str:
     """Escapes punctuation and formats alphanumeric tokens for SQLite FTS5 using BM25 OR matching."""
@@ -32,6 +144,7 @@ def sanitize_fts5_query(query: str) -> str:
     if not tokens:
         return '""'
     return " OR ".join(f'"{token}"*' for token in tokens)
+
 
 def search_bm25(
     conn: sqlite3.Connection,
@@ -70,6 +183,7 @@ def search_bm25(
     except sqlite3.OperationalError:
         return []
 
+
 def search_vector(
     conn: sqlite3.Connection,
     query: str,
@@ -106,6 +220,7 @@ def search_vector(
         results.append(record)
     return results
 
+
 def hybrid_search(
     conn: sqlite3.Connection,
     query: str,
@@ -135,7 +250,7 @@ def hybrid_search(
             ORDER BY rank
             LIMIT 50
             """,
-            (fts_query,)
+            (fts_query,),
         )
         for rank_idx, row in enumerate(cursor.fetchall()):
             bm25_ranks[row["memory_id"]] = rank_idx + 1
@@ -154,7 +269,7 @@ def hybrid_search(
         WHERE embedding MATCH ? AND k = 50
         ORDER BY distance ASC
         """,
-        (query_bytes,)
+        (query_bytes,),
     )
     for rank_idx, row in enumerate(cursor.fetchall()):
         vec_ranks[row["memory_id"]] = rank_idx + 1

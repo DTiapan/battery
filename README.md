@@ -260,6 +260,27 @@ Edit `BATTERY.md` directly in your editor, add new rules, and sync back to SQLit
 uv run battery sync
 ```
 
+### 6. Multi-Battery Context Profiles (Per-Project Isolation)
+
+Isolate rules and architectural decisions across different repositories, domains, and clients so contexts never collide:
+
+```bash
+# Create an isolated context profile
+uv run battery profile create payments-service
+
+# Switch active profile globally (shorthand: uv run battery use <name>)
+uv run battery use payments-service
+
+# Add memories specifically scoped to this profile
+uv run battery add "PCI-DSS rule: cardholder data must never be logged" -c rule
+
+# Inspect all profiles and active indicator
+uv run battery profile list
+
+# Launch an MCP server bound to a specific profile for Claude/Cursor
+uv run battery serve --profile payments-service
+```
+
 ---
 
 ## 🔌 Connecting to AI Assistants via MCP

@@ -2,9 +2,9 @@ import json
 import statistics
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
+
 from rich.console import Console
-from rich.panel import Panel
 from rich.table import Table
 
 from battery.db import get_connection, init_db, insert_memory
@@ -18,9 +18,11 @@ DATASET_PATH = EVALS_DIR / "dataset.json"
 RESULTS_JSON_PATH = EVALS_DIR / "benchmark_results.json"
 RESULTS_MD_PATH = EVALS_DIR / "benchmark_results.md"
 
+
 def load_dataset(dataset_path: Path = DATASET_PATH) -> Dict[str, Any]:
     with open(dataset_path, "r", encoding="utf-8") as f:
         return json.load(f)
+
 
 def run_evaluation(
     dataset: Optional[Dict[str, Any]] = None,
@@ -159,7 +161,10 @@ def run_evaluation(
             }
 
     # Render Rich Table
-    table = Table(title=f"🔋 Battery Retrieval Evaluation — Overall Benchmark ({total_queries} Queries)", header_style="bold magenta")
+    table = Table(
+        title=f"🔋 Battery Retrieval Evaluation — Overall Benchmark ({total_queries} Queries)",
+        header_style="bold magenta",
+    )
     table.add_column("Retrieval Strategy", style="bold cyan", width=24)
     table.add_column("Hit@1", justify="center")
     table.add_column("Hit@3", justify="center")
@@ -219,9 +224,9 @@ def run_evaluation(
     if output_markdown:
         md_content = f"""# 🔋 Battery Context Engine — Retrieval Benchmark Results
 
-**Date:** {time.strftime('%Y-%m-%d')}  
-**Evaluation Queries:** {total_queries}  
-**Corpus Size:** {len(corpus)} items  
+**Date:** {time.strftime("%Y-%m-%d")}
+**Evaluation Queries:** {total_queries}
+**Corpus Size:** {len(corpus)} items
 
 ## Overall Retrieval Performance
 
@@ -243,6 +248,7 @@ def run_evaluation(
         console.print(f"[dim]Generated Markdown report to {RESULTS_MD_PATH}[/dim]")
 
     return summary
+
 
 if __name__ == "__main__":
     run_evaluation()

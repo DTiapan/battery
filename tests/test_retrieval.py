@@ -1,14 +1,16 @@
 import pytest
+
 from battery.db import get_connection, init_db, insert_memory
 from battery.embeddings import embed_text
 from battery.retrieval import hybrid_search
+
 
 @pytest.fixture
 def populated_db(tmp_path):
     db_path = tmp_path / "test_retrieval.db"
     conn = get_connection(db_path)
     init_db(conn)
-    
+
     # Insert test dataset covering distinct categories and keyword/semantic concepts
     test_corpus = [
         ("Always use snake_case for Python function and variable names", "rule"),
@@ -17,13 +19,14 @@ def populated_db(tmp_path):
         ("User prefers dark mode themes and high-contrast syntax highlighting", "preference"),
         ("Git commit messages must adhere to conventional commits format", "rule"),
     ]
-    
+
     for content, category in test_corpus:
         vec = embed_text(content)
         insert_memory(conn, content, vec, category=category)
-        
+
     yield conn
     conn.close()
+
 
 def test_exact_keyword_retrieval(populated_db):
     # Query for exact rare token '5432'
@@ -33,12 +36,14 @@ def test_exact_keyword_retrieval(populated_db):
     assert "5432" in top["content"]
     assert top["bm25_rank"] is not None
 
+
 def test_semantic_similarity_retrieval(populated_db):
     # Query with semantic paraphrase: "guidelines for writing python code"
     results = hybrid_search(populated_db, "guidelines for writing python code", limit=3)
     assert len(results) > 0
     top = results[0]
     assert "snake_case" in top["content"]
+
 
 def test_category_filtering(populated_db):
     # Search with category filter
