@@ -1,5 +1,6 @@
 # 🔋 Battery Context Engine
 
+[![CI](https://github.com/DTiapan/battery/actions/workflows/ci.yml/badge.svg)](https://github.com/DTiapan/battery/actions/workflows/ci.yml)
 [![License: Apache 2.0 / MIT](https://img.shields.io/badge/License-Apache%202.0%20%2F%20MIT-blue.svg)](#-license)
 [![Python: 3.11+](https://img.shields.io/badge/Python-3.11%2B-blue.svg)](https://www.python.org/)
 [![MCP: 2.x Compliant](https://img.shields.io/badge/MCP-2.x%20Compliant-green.svg)](https://modelcontextprotocol.io/)
