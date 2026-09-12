@@ -19,6 +19,7 @@ from battery.db import (
 from battery.embeddings import embed_text
 from battery.retrieval import hybrid_search
 from battery.sync import export_battery_md
+from battery._version import __version__
 
 
 def format_context_resource(conn: Any, limit_per_category: int = 5) -> str:
@@ -116,7 +117,7 @@ def create_mcp_server(
             "rules, architectural decisions, and project conventions. Use 'save_memory' to persist "
             "new rules or decisions."
         ),
-        version="0.4.1",
+        version=__version__,
     )
 
     conn = get_connection(resolved_db)

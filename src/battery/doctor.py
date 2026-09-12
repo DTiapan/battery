@@ -14,7 +14,21 @@ from battery.config import EMBEDDING_DIM, get_profile_db_path, get_profile_md_pa
 from battery.hooks import hooks_installed
 from battery.git_hooks import git_hook_installed
 from battery.migrate import SCHEMA_VERSION, get_schema_version, migrate_db
+from battery.mcp_server import format_context_resource, format_rules_resource
+from battery.retrieval import hybrid_search
 from battery.sync import export_battery_md
+
+ONBOARD_SEED_MEMORIES: List[tuple[str, str]] = [
+    (
+        "Battery stores project rules and architectural decisions locally using "
+        "hybrid BM25 + vector search with a git-committable BATTERY.md mirror.",
+        "decision",
+    ),
+    (
+        "Prefer explicit LIMIT clauses on all production SQL queries.",
+        "rule",
+    ),
+]
 
 
 def _check(name: str, ok: bool, detail: str, fix: Optional[str] = None) -> Dict[str, Any]:
@@ -134,6 +148,59 @@ def run_doctor(
                 "Run: battery git install",
             )
         )
+
+        ctx = format_context_resource(conn)
+        ctx_ok = memory_count > 0 and "No active" not in ctx and len(ctx.strip()) > 120
+        checks.append(
+            _check(
+                "mcp_context",
+                ctx_ok,
+                "battery://context returns project context"
+                if ctx_ok
+                else "battery://context empty or placeholder",
+                "Run: battery onboard --seed or battery add ...",
+            )
+        )
+
+        rules = format_rules_resource(conn)
+        rules_ok = memory_count > 0 and "No active rules found" not in rules
+        checks.append(
+            _check(
+                "mcp_rules",
+                rules_ok,
+                "battery://rules returns active rules"
+                if rules_ok
+                else "battery://rules has no rule entries",
+                "Run: battery add ... -c rule",
+            )
+        )
+
+        if memory_count > 0:
+            sample = conn.execute(
+                "SELECT content FROM memories WHERE is_deleted = 0 ORDER BY id LIMIT 1"
+            ).fetchone()
+            sample_text = sample[0] if sample else ""
+            words = sample_text.split()[:4]
+            query = " ".join(words) if len(words) >= 2 else sample_text[:48]
+            results = hybrid_search(conn, query, limit=3, verify=False)
+            recall_ok = len(results) > 0
+            checks.append(
+                _check(
+                    "recall_smoke",
+                    recall_ok,
+                    f"hybrid recall returned {len(results)} hit(s) for seeded query",
+                    "Run: battery query \"<topic>\" to debug retrieval",
+                )
+            )
+        else:
+            checks.append(
+                _check(
+                    "recall_smoke",
+                    False,
+                    "No memories to test recall",
+                    "Run: battery onboard --seed",
+                )
+            )
 
     passed = sum(1 for c in checks if c["ok"])
     return {

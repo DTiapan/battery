@@ -18,6 +18,7 @@
 | O2-KR2.1 | Rot benchmark stale-recall failures | 0 | — | **0 / 6 scenarios** | ✅ |
 | O2-KR2.2 | JIT verify p95 on rot suite | < 10 ms | — | **0.25 ms** | ✅ |
 | O1-KR1.3 | Handoff scenario eval | all pass | — | **6/6 scenarios** | ✅ |
+| O3-KR3.1 | Onboard adoption doctor (seed + resources + recall) | all core checks pass | — | **mcp_context + mcp_rules + recall_smoke** | ✅ |
 
 ---
 
@@ -87,6 +88,7 @@
 | Profile export/import | v0.4.1 | Round-trip integrity | — | checksum tests pass | 100% bundle restore | ✅ |
 | Git post-commit capture | v0.4.1 | Episodic rows on commit | — | unit tests | 1 row/commit | ✅ |
 | Adaptive RRF @ scale | v0.4.2 | Stress hybrid MRR | 0.7761 | **0.8594** | ≥ 0.8528 | ✅ |
+| MCP adoption path | v0.5.0 | Onboard doctor core checks | — | context + rules + recall pass | seed + recall smoke | ✅ |
 
 ---
 
@@ -99,6 +101,7 @@
 | **C (rot)** | Rot suite (`battery eval --rot`) | ✅ |
 | **C (handoff)** | Handoff scenario eval (`battery eval --handoff`) | ✅ |
 | **C (dedup)** | Dedup re-ingest stress (`battery eval --dedup-stress`) | ✅ |
+| **NOW-3** | `battery onboard` + `doctor --adoption` resource/recall checks | ✅ |
 
 ---
 

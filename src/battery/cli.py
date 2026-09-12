@@ -528,6 +528,74 @@ def setup(
 
 
 @app.command()
+def onboard(
+    client: str = typer.Option(
+        "all", "--client", "-c", help="Target AI client: 'claude', 'cursor', or 'all'"
+    ),
+    profile: Optional[str] = typer.Option(None, "--profile", "-p", help="Target context profile"),
+    db_path: Optional[Path] = typer.Option(None, "--db", help="Path to SQLite database"),
+    md_path: Optional[Path] = typer.Option(None, "--md", help="Path to living BATTERY.md mirror"),
+    seed: bool = typer.Option(True, "--seed/--no-seed", help="Seed starter memories when empty"),
+    skip_setup: bool = typer.Option(
+        False, "--skip-setup", help="Skip MCP client registration (init + doctor only)"
+    ),
+):
+    """One-shot init, optional seed memories, MCP setup, and adoption doctor."""
+    from battery.doctor import ONBOARD_SEED_MEMORIES, run_doctor
+
+    resolved_db, resolved_md = resolve_paths(profile, db_path, md_path)
+    conn = get_connection(resolved_db)
+    init_db(conn)
+    export_battery_md(conn, resolved_md)
+
+    row = conn.execute("SELECT COUNT(*) FROM memories WHERE is_deleted = 0").fetchone()
+    memory_count = row[0] if row else 0
+    seeded = 0
+    if seed and memory_count == 0:
+        with console.status("[cyan]Seeding starter memories...[/cyan]"):
+            for content, category in ONBOARD_SEED_MEMORIES:
+                vec = embed_text(content)
+                insert_memory(conn, content, vec, category=category, importance=1.0)
+                seeded += 1
+            export_battery_md(conn, resolved_md)
+
+    if not skip_setup:
+        setup(client=client, profile=profile)
+
+    report = run_doctor(conn, resolved_md, adoption=True, project_dir=Path.cwd())
+
+    table = Table(title="Battery Onboard")
+    table.add_column("Check", style="bold")
+    table.add_column("Status", justify="center")
+    table.add_column("Detail")
+
+    for check in report["checks"]:
+        status = "[green]PASS[/green]" if check["ok"] else "[red]FAIL[/red]"
+        table.add_row(check["name"], status, check["detail"])
+        if not check["ok"] and check.get("fix"):
+            table.add_row("", "", f"[yellow]Fix:[/yellow] {check['fix']}")
+
+    console.print(table)
+    console.print(
+        Panel.fit(
+            f"[green]✓ Onboard complete[/green]\n"
+            f"Database: [bold]{resolved_db}[/bold]\n"
+            f"Mirror:   [bold]{resolved_md}[/bold]\n"
+            f"Seeded:   [bold]{seeded}[/bold] starter memories",
+            title="Battery Context Engine",
+        )
+    )
+
+    if report["healthy"]:
+        console.print("[green]✓ Adoption checks passed — recall and MCP resources are ready[/green]")
+    else:
+        console.print(
+            f"[yellow]⚠ {report['passed']}/{report['total']} adoption checks passed[/yellow]"
+        )
+        raise typer.Exit(code=1)
+
+
+@app.command()
 def prune(
     dry_run: bool = typer.Option(False, "--dry-run", help="Report stale memories without deleting"),
     since_commit: Optional[str] = typer.Option(

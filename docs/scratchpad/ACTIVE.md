@@ -9,14 +9,13 @@
 
 ## Current focus
 
-**Impact over features** — retrieval Sprint A+B is done (uncommitted v0.4.2). Next work must move OKRs on **session amnesia** and **context rot**, not engine sprawl.
+**Impact over features** — v0.5.0 ships Sprint C evals + NOW-3 adoption. Next: user interviews (roadmap validation debt).
 
 | Priority | What | Why (impact) |
 |----------|------|--------------|
-| 1 | ~~Commit v0.4.2~~ | Done (`7fc2e2e`) |
-| 2 | **Sprint C** | Complete ✅ (rot, handoff, dedup) |
-| 3 | **NOW-3 adoption** | `doctor --adoption` + setup docs |
-| 4 | **5 user interviews** | Roadmap confidence debt; validate model-switch / rot pain |
+| 1 | ~~v0.5.0 release~~ | Sprint C + adaptive RRF + onboard path |
+| 2 | **5 user interviews** | Roadmap confidence debt; validate model-switch / rot pain |
+| 3 | **NEXT-4 session log ingestion** | Optional collector — after adoption proof |
 
 Research paper: **LATER** — gates in [`PRODUCT_ROADMAP.md` §8](../roadmap/PRODUCT_ROADMAP.md). Not a build target until product proof + comparative eval exist.
 
@@ -24,6 +23,7 @@ Research paper: **LATER** — gates in [`PRODUCT_ROADMAP.md` §8](../roadmap/PRO
 
 ## Recently completed
 
+- **v0.5.0** — `battery onboard`, doctor MCP resource + recall smoke checks, Sprint C eval harnesses
 - **Sprint A+B** — `IMPROVEMENT_SCORECARD.md`, AGENTS.md ship gate, adaptive RRF, 2 Hit@0 corpus fixes (real-world MRR **0.9083**)
 - **v0.4.1** — profile export/import, git post-commit, ADR-0007
 - **v0.3.x** — handoff, near-dedup
@@ -64,4 +64,4 @@ Research paper: **LATER** — gates in [`PRODUCT_ROADMAP.md` §8](../roadmap/PRO
 2. ~~Rot eval suite~~ — `battery eval --rot` (6/6 pass)
 3. ~~Handoff scenario eval~~ — `battery eval --handoff` (6/6 pass)
 4. ~~Dedup re-ingest stress~~ — `battery eval --dedup-stress` (97% dup reduction, MRR beats naive)
-5. **NOW-3** — adoption path (`doctor --adoption`, session-start resource wiring docs)
+5. ~~NOW-3 adoption path~~ — `battery onboard` + `doctor --adoption` resource/recall checks

@@ -9,7 +9,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python: 3.11+](https://img.shields.io/badge/Python-3.11%2B-blue.svg)](https://www.python.org/)
 [![MCP: 2.x](https://img.shields.io/badge/MCP-2.x%20Compliant-green.svg)](https://modelcontextprotocol.io/)
-[![Version: 0.4.1](https://img.shields.io/badge/version-0.4.1-blue.svg)](pyproject.toml)
+[![Version: 0.5.0](https://img.shields.io/badge/version-0.5.0-blue.svg)](pyproject.toml)
 
 **Keywords:** local AI memory · MCP memory server · Cursor context · Claude Code memory · hybrid RAG · coding agent context · stale memory pruning · session checkpoints
 
@@ -63,10 +63,16 @@ Requires **Python 3.11+** and [`uv`](https://github.com/astral-sh/uv).
 
 ```bash
 cd /path/to/your/project
-uv run battery init
+uv run battery onboard
 ```
 
-Creates `battery.db` and scaffolds `BATTERY.md`.
+One command: creates `battery.db`, seeds starter memories, registers MCP in Cursor/Claude, and runs adoption checks.
+
+Or step by step:
+
+```bash
+uv run battery init
+```
 
 ### Save and recall context
 
@@ -223,6 +229,7 @@ uv run battery serve --profile payments-service
 | Command | Description |
 |---------|-------------|
 | `battery init` | Create DB + `BATTERY.md` in current project |
+| `battery onboard` | Init + seed + MCP setup + adoption doctor |
 | `battery add "..." -c rule\|decision\|preference` | Save a memory |
 | `battery query "..."` | Hybrid search with scored results |
 | `battery list` | Show active memories |
@@ -276,9 +283,9 @@ Real-world corpus (92 engineering memories, 30 developer queries — `battery ev
 
 | Strategy | Hit@1 | MRR | p50 latency |
 |----------|------:|----:|------------:|
-| BM25 (FTS5) | 73.3% | 0.79 | 0.6ms |
-| Vector (sqlite-vec) | 76.7% | 0.83 | 13.8ms |
-| **Battery hybrid (RRF)** | **83.3%** | **0.86** | 14.4ms |
+| BM25 (FTS5) | 80.0% | 0.86 | 0.6ms |
+| Vector (sqlite-vec) | 83.3% | 0.89 | 25.3ms |
+| **Battery hybrid (adaptive RRF)** | **86.7%** | **0.91** | 25.3ms |
 
 Full reports: [`realworld_benchmark_report.md`](src/battery/evals/realworld_benchmark_report.md) · [`stress_test_report.md`](src/battery/evals/stress_test_report.md)
 
@@ -287,7 +294,7 @@ Full reports: [`realworld_benchmark_report.md`](src/battery/evals/realworld_benc
 ## Development
 
 ```bash
-uv run pytest -v          # 48 tests
+uv run pytest -v          # 57 tests
 uv run battery doctor     # local health check
 ```
 
