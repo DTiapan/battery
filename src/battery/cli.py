@@ -587,7 +587,9 @@ def onboard(
     )
 
     if report["healthy"]:
-        console.print("[green]✓ Adoption checks passed — recall and MCP resources are ready[/green]")
+        console.print(
+            "[green]✓ Adoption checks passed — recall and MCP resources are ready[/green]"
+        )
     else:
         console.print(
             f"[yellow]⚠ {report['passed']}/{report['total']} adoption checks passed[/yellow]"
@@ -652,9 +654,7 @@ def doctor(
     if report["healthy"]:
         console.print("[green]✓ Battery is healthy[/green]")
     else:
-        console.print(
-            f"[yellow]⚠ {report['passed']}/{report['total']} checks passed[/yellow]"
-        )
+        console.print(f"[yellow]⚠ {report['passed']}/{report['total']} checks passed[/yellow]")
         raise typer.Exit(code=1)
 
 
@@ -902,7 +902,9 @@ def hook_run(
         raise typer.Exit(code=1) from exc
 
     if result.get("additionalContext"):
-        print(json.dumps({"hookSpecificOutput": {"additionalContext": result["additionalContext"]}}))
+        print(
+            json.dumps({"hookSpecificOutput": {"additionalContext": result["additionalContext"]}})
+        )
     else:
         print(json.dumps(result))
 
@@ -974,7 +976,9 @@ def handoff_export(
     to_client: Optional[str] = typer.Option(
         None, "--to-client", help="Target AI client (optional hint for the next session)"
     ),
-    stdout: bool = typer.Option(False, "--stdout", help="Print markdown to stdout instead of writing files"),
+    stdout: bool = typer.Option(
+        False, "--stdout", help="Print markdown to stdout instead of writing files"
+    ),
     profile: Optional[str] = typer.Option(None, "--profile", "-p", help="Target context profile"),
     db_path: Optional[Path] = typer.Option(None, "--db", help="Path to SQLite database"),
 ):

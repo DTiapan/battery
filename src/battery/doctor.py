@@ -10,11 +10,11 @@ try:
 except ImportError:
     import sqlite3
 
-from battery.config import EMBEDDING_DIM, get_profile_db_path, get_profile_md_path
-from battery.hooks import hooks_installed
+from battery.config import EMBEDDING_DIM, get_profile_db_path
 from battery.git_hooks import git_hook_installed
-from battery.migrate import SCHEMA_VERSION, get_schema_version, migrate_db
+from battery.hooks import hooks_installed
 from battery.mcp_server import format_context_resource, format_rules_resource
+from battery.migrate import SCHEMA_VERSION, get_schema_version, migrate_db
 from battery.retrieval import hybrid_search
 from battery.sync import export_battery_md
 
@@ -70,7 +70,9 @@ def run_doctor(
         vec_ok = False
         vec_detail = str(exc)
 
-    checks.append(_check("sqlite_vec", vec_ok, vec_detail, "Reinstall battery with sqlean-py / pysqlite3"))
+    checks.append(
+        _check("sqlite_vec", vec_ok, vec_detail, "Reinstall battery with sqlean-py / pysqlite3")
+    )
 
     row = conn.execute("SELECT COUNT(*) FROM memories WHERE is_deleted = 0").fetchone()
     memory_count = row[0] if row else 0
@@ -144,7 +146,9 @@ def run_doctor(
             _check(
                 "git_post_commit",
                 git_ok,
-                "Git post-commit hook installed" if git_ok else "Git post-commit hook not installed",
+                "Git post-commit hook installed"
+                if git_ok
+                else "Git post-commit hook not installed",
                 "Run: battery git install",
             )
         )
@@ -189,7 +193,7 @@ def run_doctor(
                     "recall_smoke",
                     recall_ok,
                     f"hybrid recall returned {len(results)} hit(s) for seeded query",
-                    "Run: battery query \"<topic>\" to debug retrieval",
+                    'Run: battery query "<topic>" to debug retrieval',
                 )
             )
         else:

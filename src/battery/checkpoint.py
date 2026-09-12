@@ -123,7 +123,9 @@ def handle_hook_event(
 
     if event_name == "PreCompact":
         trigger = hook_input.get("trigger", "auto")
-        payload = build_checkpoint_payload(hook_input, event_type="pre_compact", extra={"trigger": trigger})
+        payload = build_checkpoint_payload(
+            hook_input, event_type="pre_compact", extra={"trigger": trigger}
+        )
         result = ingest_checkpoint(conn, payload, md_path)
         return {"status": "ok", "event": event_name, "trigger": trigger, **result}
 
@@ -152,7 +154,9 @@ def handle_hook_event(
     return {"status": "ignored", "event": event_name}
 
 
-def _latest_checkpoint_for_project(conn: sqlite3.Connection, project_root: str) -> Optional[Dict[str, Any]]:
+def _latest_checkpoint_for_project(
+    conn: sqlite3.Connection, project_root: str
+) -> Optional[Dict[str, Any]]:
     from battery.db import list_session_checkpoints
 
     rows = list_session_checkpoints(conn, project_root=project_root, limit=1)

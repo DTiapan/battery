@@ -1,7 +1,6 @@
 """Claude Code hook installation and settings merge."""
 
 import json
-import os
 import stat
 from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional
@@ -130,9 +129,7 @@ def strip_battery_hooks(settings: Dict[str, Any]) -> Dict[str, Any]:
                 kept.append(group)
                 continue
             inner = [
-                h
-                for h in group.get("hooks", [])
-                if isinstance(h, dict) and not _is_battery_hook(h)
+                h for h in group.get("hooks", []) if isinstance(h, dict) and not _is_battery_hook(h)
             ]
             if inner:
                 new_group = dict(group)
@@ -195,7 +192,9 @@ def uninstall_hooks(
     return {"scope": scope, "settings_path": str(settings_path), "removed_script": removed_script}
 
 
-def hooks_installed(scope: Literal["user", "project"] = "project", project_dir: Optional[Path] = None) -> bool:
+def hooks_installed(
+    scope: Literal["user", "project"] = "project", project_dir: Optional[Path] = None
+) -> bool:
     """Returns True if Battery hooks appear in Claude settings."""
     root = project_dir or Path.cwd()
     settings = _read_json(_settings_path(scope, root if scope == "project" else None))

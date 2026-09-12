@@ -117,7 +117,9 @@ def hash_content(content: str) -> str:
     return hashlib.sha256(content.strip().encode("utf-8")).hexdigest()
 
 
-def hash_file_snippet(path: Path, line_start: Optional[int] = None, line_end: Optional[int] = None) -> str:
+def hash_file_snippet(
+    path: Path, line_start: Optional[int] = None, line_end: Optional[int] = None
+) -> str:
     """Returns SHA-256 of file content or a line range for citation verification."""
     if not path.is_file():
         return ""

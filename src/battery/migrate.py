@@ -26,9 +26,7 @@ def get_schema_version(conn: sqlite3.Connection) -> int:
         );
         """
     )
-    row = conn.execute(
-        "SELECT value FROM schema_meta WHERE key = 'schema_version'"
-    ).fetchone()
+    row = conn.execute("SELECT value FROM schema_meta WHERE key = 'schema_version'").fetchone()
     if row is None:
         return 0
     try:

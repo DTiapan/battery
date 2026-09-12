@@ -4,7 +4,6 @@ Validates Cursor ↔ Claude (and multi-hop) handoff export/load and session-star
 injection (O1-KR1.3).
 """
 
-import json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Dict, List
@@ -136,7 +135,9 @@ def _scenario_ingest_recall_after_switch(conn, workspace: Path) -> HandoffScenar
     conn.commit()
 
     results = hybrid_search(conn, "webhook dedupe Redis idempotent", limit=5, verify=False)
-    found = any("webhook" in r["content"].lower() and "redis" in r["content"].lower() for r in results)
+    found = any(
+        "webhook" in r["content"].lower() and "redis" in r["content"].lower() for r in results
+    )
     return HandoffScenarioResult(
         scenario_id="ingest-recall-after-switch",
         description="Handoff ingested as episodic memory is findable via hybrid search",
@@ -172,7 +173,9 @@ def _scenario_lineage_three_hops(conn, workspace: Path) -> HandoffScenarioResult
     lineage_path = get_handoff_dir(workspace) / LINEAGE_FILE
     file_hops = 0
     if lineage_path.is_file():
-        file_hops = sum(1 for line in lineage_path.read_text(encoding="utf-8").splitlines() if line.strip())
+        file_hops = sum(
+            1 for line in lineage_path.read_text(encoding="utf-8").splitlines() if line.strip()
+        )
 
     passed = len(lineage) >= 2 and file_hops >= LINEAGE_HOPS_TARGET
     return HandoffScenarioResult(
@@ -370,7 +373,7 @@ def _write_report(summary: Dict[str, Any]) -> None:
 
 | Metric | Result | Target | Status |
 | :--- | :---: | :---: | :---: |
-| **Scenarios passed** | **{summary["passed_scenarios"]}/{summary["total_scenarios"]}** | all | {'✅' if summary['all_passed'] else '❌'} |
+| **Scenarios passed** | **{summary["passed_scenarios"]}/{summary["total_scenarios"]}** | all | {"✅" if summary["all_passed"] else "❌"} |
 
 ---
 

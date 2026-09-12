@@ -1,10 +1,8 @@
-import json
-
 from typer.testing import CliRunner
 
 from battery.checkpoint import handle_hook_event, ingest_checkpoint
 from battery.cli import app
-from battery.db import get_connection, init_db, list_memories, list_session_checkpoints
+from battery.db import get_connection, init_db, list_memories
 from battery.handoff import (
     export_handoff,
     format_handoff_markdown,

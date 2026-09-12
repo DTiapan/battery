@@ -1,5 +1,3 @@
-from pathlib import Path
-
 from battery.db import get_connection, hash_file_snippet, init_db, insert_memory
 from battery.retrieval import hybrid_search
 from battery.verify import filter_verified_results, verify_citation, verify_memory

@@ -235,9 +235,7 @@ def _resolve_rrf_weights(
     vec_weight: float,
 ) -> tuple[float, float]:
     """Lean on vector fusion when the corpus is large and defaults are in use."""
-    using_defaults = (
-        text_weight == DEFAULT_TEXT_WEIGHT and vec_weight == DEFAULT_VEC_WEIGHT
-    )
+    using_defaults = text_weight == DEFAULT_TEXT_WEIGHT and vec_weight == DEFAULT_VEC_WEIGHT
     if memory_count >= LARGE_CORPUS_RRF_THRESHOLD and using_defaults:
         return LARGE_CORPUS_TEXT_WEIGHT, LARGE_CORPUS_VEC_WEIGHT
     return text_weight, vec_weight
@@ -310,9 +308,7 @@ def hybrid_search(
     for rank_idx, row in enumerate(cursor.fetchall()):
         vec_ranks[row["memory_id"]] = rank_idx + 1
 
-    memory_count = conn.execute(
-        "SELECT COUNT(*) FROM memories WHERE is_deleted = 0"
-    ).fetchone()[0]
+    memory_count = conn.execute("SELECT COUNT(*) FROM memories WHERE is_deleted = 0").fetchone()[0]
     text_weight, vec_weight = _resolve_rrf_weights(memory_count, text_weight, vec_weight)
 
     # If corpus is large and BM25 found nothing, lean on vector ordering

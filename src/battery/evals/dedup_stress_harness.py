@@ -177,9 +177,7 @@ def run_dedup_stress_benchmark(
     dedup_conn.close()
 
     duplicate_rows_prevented = naive_extra_rows - dedup_extra_rows
-    reduction_rate = (
-        duplicate_rows_prevented / naive_extra_rows if naive_extra_rows else 0.0
-    )
+    reduction_rate = duplicate_rows_prevented / naive_extra_rows if naive_extra_rows else 0.0
     merge_rate = dedup_prevented / dedup_attempted if dedup_attempted else 0.0
     mrr_delta_vs_baseline = post_mrr - baseline_mrr
     mrr_delta_vs_naive = post_mrr - naive_post_mrr
@@ -286,12 +284,12 @@ def _write_report(summary: Dict[str, Any]) -> None:
 | Metric | Result | Target | Status |
 | :--- | :---: | :---: | :---: |
 | **Naive extra rows** | **{summary["naive_extra_rows"]}** | — | — |
-| **Dedup extra rows** | **{summary["dedup_extra_rows"]}** | ≪ naive | {'✅' if summary['dedup_extra_rows'] < summary['naive_extra_rows'] else '❌'} |
-| **Duplicate row reduction** | **{summary["duplicate_reduction_rate"] * 100:.1f}%** | ≥ {summary["duplicate_reduction_target"] * 100:.0f}% | {'✅' if summary['reduction_pass'] else '❌'} |
+| **Dedup extra rows** | **{summary["dedup_extra_rows"]}** | ≪ naive | {"✅" if summary["dedup_extra_rows"] < summary["naive_extra_rows"] else "❌"} |
+| **Duplicate row reduction** | **{summary["duplicate_reduction_rate"] * 100:.1f}%** | ≥ {summary["duplicate_reduction_target"] * 100:.0f}% | {"✅" if summary["reduction_pass"] else "❌"} |
 | **Paraphrase merge rate** | **{summary["merge_rate"] * 100:.1f}%** | — | — |
 | **Baseline hybrid MRR (pre re-ingest)** | **{summary["baseline_hybrid_mrr"]}** | — | — |
 | **Naive post re-ingest hybrid MRR** | **{summary["naive_post_reingest_mrr"]}** | — | — |
-| **Dedup post re-ingest hybrid MRR** | **{summary["post_reingest_hybrid_mrr"]}** | ≥ {summary["naive_post_reingest_mrr"] - MRR_REGRESSION_TOLERANCE:.4f} | {'✅' if summary['mrr_pass'] else '❌'} |
-| **MRR delta vs naive re-ingest** | **{summary["mrr_delta_vs_naive"]:+.4f}** | ≥ -{MRR_REGRESSION_TOLERANCE} | {'✅' if summary['mrr_pass'] else '❌'} |
+| **Dedup post re-ingest hybrid MRR** | **{summary["post_reingest_hybrid_mrr"]}** | ≥ {summary["naive_post_reingest_mrr"] - MRR_REGRESSION_TOLERANCE:.4f} | {"✅" if summary["mrr_pass"] else "❌"} |
+| **MRR delta vs naive re-ingest** | **{summary["mrr_delta_vs_naive"]:+.4f}** | ≥ -{MRR_REGRESSION_TOLERANCE} | {"✅" if summary["mrr_pass"] else "❌"} |
 """
     REPORT_PATH.write_text(md, encoding="utf-8")

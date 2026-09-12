@@ -19,7 +19,15 @@ def _git_deleted_files(project_root: Path, since_commit: Optional[str] = None) -
     if not (project_root / ".git").is_dir():
         return set()
 
-    cmd = ["git", "-C", str(project_root), "log", "--diff-filter=D", "--name-only", "--pretty=format:"]
+    cmd = [
+        "git",
+        "-C",
+        str(project_root),
+        "log",
+        "--diff-filter=D",
+        "--name-only",
+        "--pretty=format:",
+    ]
     if since_commit:
         cmd.append(f"{since_commit}..HEAD")
 

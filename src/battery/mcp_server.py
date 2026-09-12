@@ -3,6 +3,7 @@ from typing import Any, Dict, List, Optional
 
 from mcp.server.mcpserver import MCPServer
 
+from battery._version import __version__
 from battery.config import (
     get_profile_db_path,
     get_profile_md_path,
@@ -19,7 +20,6 @@ from battery.db import (
 from battery.embeddings import embed_text
 from battery.retrieval import hybrid_search
 from battery.sync import export_battery_md
-from battery._version import __version__
 
 
 def format_context_resource(conn: Any, limit_per_category: int = 5) -> str:

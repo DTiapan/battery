@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from battery.config import EMBEDDING_MODEL, get_profile_db_path, get_profile_md_path
-from battery.db import get_connection, init_db
+from battery.db import get_connection
 from battery.migrate import get_schema_version, migrate_db
 
 BUNDLE_FORMAT = "battery-bundle"
@@ -169,8 +169,7 @@ def import_profile_bundle(
 
         if db_dest.exists() and not force:
             raise FileExistsError(
-                f"Profile '{target_profile}' already exists at {db_dest}. "
-                "Use --force to overwrite."
+                f"Profile '{target_profile}' already exists at {db_dest}. Use --force to overwrite."
             )
 
         db_dest.parent.mkdir(parents=True, exist_ok=True)

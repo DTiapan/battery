@@ -1,6 +1,5 @@
 import subprocess
 
-import pytest
 from typer.testing import CliRunner
 
 from battery.cli import app

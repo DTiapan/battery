@@ -1,5 +1,3 @@
-from pathlib import Path
-
 from battery.db import get_connection, hash_file_snippet, init_db, insert_memory, list_memories
 from battery.prune import prune_stale_memories
 

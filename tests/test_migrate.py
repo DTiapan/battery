@@ -12,9 +12,7 @@ def test_schema_migration_to_v2(tmp_path):
 
     tables = {
         row[0]
-        for row in conn.execute(
-            "SELECT name FROM sqlite_master WHERE type='table'"
-        ).fetchall()
+        for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
     }
     assert "memory_events" in tables
     assert "memory_citations" in tables

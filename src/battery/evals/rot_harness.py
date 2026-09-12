@@ -335,9 +335,9 @@ def _write_report(summary: Dict[str, Any]) -> None:
 
 | Metric | Result | Target | Status |
 | :--- | :---: | :---: | :---: |
-| **Scenarios passed** | **{summary["passed_scenarios"]}/{summary["total_scenarios"]}** | all | {'✅' if summary['all_passed'] else '❌'} |
-| **Stale-recall failures** | **{summary["stale_recall_failures"]}** | 0 | {'✅' if stale_ok else '❌'} |
-| **JIT verify p95 latency** | **{summary["verify_latency_p95_ms"]} ms** | < {summary["verify_p95_target_ms"]} ms | {'✅' if verify_ok else '❌'} |
+| **Scenarios passed** | **{summary["passed_scenarios"]}/{summary["total_scenarios"]}** | all | {"✅" if summary["all_passed"] else "❌"} |
+| **Stale-recall failures** | **{summary["stale_recall_failures"]}** | 0 | {"✅" if stale_ok else "❌"} |
+| **JIT verify p95 latency** | **{summary["verify_latency_p95_ms"]} ms** | < {summary["verify_p95_target_ms"]} ms | {"✅" if verify_ok else "❌"} |
 | **JIT verify avg latency** | **{summary["verify_latency_avg_ms"]} ms** | — | — |
 
 ---

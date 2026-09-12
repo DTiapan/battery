@@ -53,8 +53,8 @@ def test_category_filtering(populated_db):
 
 
 def test_adaptive_rrf_weights_small_corpus(populated_db):
-    from battery.retrieval import _resolve_rrf_weights
     from battery.config import DEFAULT_TEXT_WEIGHT, DEFAULT_VEC_WEIGHT
+    from battery.retrieval import _resolve_rrf_weights
 
     tw, vw = _resolve_rrf_weights(5, DEFAULT_TEXT_WEIGHT, DEFAULT_VEC_WEIGHT)
     assert tw == DEFAULT_TEXT_WEIGHT
@@ -62,7 +62,6 @@ def test_adaptive_rrf_weights_small_corpus(populated_db):
 
 
 def test_adaptive_rrf_weights_large_corpus():
-    from battery.retrieval import _resolve_rrf_weights
     from battery.config import (
         DEFAULT_TEXT_WEIGHT,
         DEFAULT_VEC_WEIGHT,
@@ -70,6 +69,7 @@ def test_adaptive_rrf_weights_large_corpus():
         LARGE_CORPUS_TEXT_WEIGHT,
         LARGE_CORPUS_VEC_WEIGHT,
     )
+    from battery.retrieval import _resolve_rrf_weights
 
     tw, vw = _resolve_rrf_weights(
         LARGE_CORPUS_RRF_THRESHOLD, DEFAULT_TEXT_WEIGHT, DEFAULT_VEC_WEIGHT

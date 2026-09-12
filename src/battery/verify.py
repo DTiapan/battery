@@ -1,7 +1,7 @@
 """Just-in-time verification of memory citations before recall."""
 
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 try:
     import pysqlite3 as sqlite3
