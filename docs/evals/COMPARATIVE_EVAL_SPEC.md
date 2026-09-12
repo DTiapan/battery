@@ -254,13 +254,14 @@ Do not mix Sediment MRR with Battery harness MRR in one table without labeling t
 | `src/battery/evals/sediment/runner.py` + CLI | `uv run battery eval --comparative` | ✅ |
 | Smoke test (1k/200 retrieval) | MRR **0.609**, Recall@5 **0.790** (2026-09-12) | ✅ |
 
-### Phase 2 — Competitor adapters (1 PR)
+### Phase 2 — Competitor adapters (1 PR) ✅
 
-| Task | Output |
-|------|--------|
-| `adapters/memex.py`, `adapters/local_memory_mcp.py` | C1, C1b, C2 |
-| `docs/evals/COMPARATIVE_SETUP.md` | Install pins |
-| `battery eval --comparative` CLI wrapper | Delegates to sediment `run.py` |
+| Task | Output | Status |
+|------|--------|--------|
+| `src/battery/evals/sediment/memex_adapter.py` | C1, C1b | ✅ (requires `go install`) |
+| `src/battery/evals/sediment/local_memory_mcp_adapter.py` | C2 | ✅ |
+| `src/battery/evals/sediment/report.py` | `--write-report` | ✅ |
+| Smoke: battery vs local-memory-mcp | MRR **0.609 vs 0.457** | ✅ |
 
 ### Phase 3 — Full run & freeze (1 PR, then stop)
 

@@ -33,11 +33,11 @@ pip install -e ".[dev]"
 # Sanity: ChromaDB baseline only
 python run.py --systems chromadb --phases retrieval --seed 42
 
-# Full comparative (after Battery/memex/local-memory adapters exist)
-python run.py --systems battery,memex,local-memory-mcp,chromadb \
-              --phases retrieval,latency \
-              --seed 42
-python report.py
+# Full Tier 1 comparative (recommended)
+uv run battery eval --comparative \
+  --systems battery,memex,local-memory-mcp \
+  --phases retrieval \
+  --write-report
 ```
 
 Dataset files (no API key):
@@ -65,16 +65,21 @@ uv run battery eval --real
 
 ## 3. memex (Tier 1 competitor)
 
+Requires **Go 1.22+** on PATH.
+
 ```bash
 go install github.com/kioie/memex/cmd/memex@v0.6.0   # pin version in report
-memex --version
+export PATH="$PATH:$(go env GOPATH)/bin"
+memex version
 
-export MEMEX_DIR="$(pwd)/src/battery/evals/.comparative_workspaces/memex-sediment"
-mkdir -p "$MEMEX_DIR"
+# Run (C1 keyword)
+uv run battery eval --comparative --systems battery,memex,local-memory-mcp --phases retrieval --write-report
 
-# C1b hybrid variant (separate run row)
-export MEMEX_HYBRID=1
+# C1b hybrid variant (separate run)
+MEMEX_HYBRID=1 uv run battery eval --comparative --systems memex-hybrid --phases retrieval
 ```
+
+Data dir is set automatically per run under `.comparative_workspaces/memex/`.
 
 ## 4. local-memory-mcp (Tier 1 competitor)
 

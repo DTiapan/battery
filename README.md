@@ -289,7 +289,7 @@ Real-world corpus (92 engineering memories, 30 developer queries — `battery ev
 
 Full reports: [`realworld_benchmark_report.md`](src/battery/evals/realworld_benchmark_report.md) · [`stress_test_report.md`](src/battery/evals/stress_test_report.md)
 
-**Comparative (pre-launch proof):** [spec v2](docs/evals/COMPARATIVE_EVAL_SPEC.md) — Tier 1: [Sediment benchmark](https://github.com/rendro/sediment-benchmark) (1k memories, 200 queries) vs memex + local-memory-mcp; Tier 2: Battery real-world corpus (report pending).
+**Comparative (pre-launch proof):** [Sediment Tier 1 report](src/battery/evals/comparative_benchmark_report.md) — Battery MRR **0.609** vs local-memory-mcp **0.457** (1k/200); memex run pending. [Spec](docs/evals/COMPARATIVE_EVAL_SPEC.md).
 
 ---
 

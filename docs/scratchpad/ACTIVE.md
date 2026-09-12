@@ -13,7 +13,7 @@
 
 | Priority | What | Why (impact) |
 |----------|------|--------------|
-| 1 | **G2 Tier 1 — Sediment benchmark** | Neutral 1k/200 public dataset — only valid competitor proof ([spec v2](../evals/COMPARATIVE_EVAL_SPEC.md)) |
+| 1 | **G2 Tier 1 — finish memex run** | Battery **0.609** vs local-memory **0.457** done; memex needs Go ([report](../src/battery/evals/comparative_benchmark_report.md)) |
 | 2 | **G2 Tier 2 — Battery RW** | Supplementary domain proof (92/30 ADR corpus) |
 | 3 | **5 user interviews** | After G2 report — validation debt |
 

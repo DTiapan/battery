@@ -19,7 +19,7 @@
 | O2-KR2.2 | JIT verify p95 on rot suite | < 10 ms | — | **0.25 ms** | ✅ |
 | O1-KR1.3 | Handoff scenario eval | all pass | — | **6/6 scenarios** | ✅ |
 | O3-KR3.1 | Onboard adoption doctor (seed + resources + recall) | all core checks pass | — | **mcp_context + mcp_rules + recall_smoke** | ✅ |
-| **G2** | Comparative eval vs memex + local-memory-mcp on **Sediment** (Tier 1) | G2a–G2d pass on 1k/200 public benchmark | — | **spec v2** ([COMPARATIVE_EVAL_SPEC](../evals/COMPARATIVE_EVAL_SPEC.md)) | 🟡 |
+| **G2** | Comparative eval vs memex + local-memory-mcp on **Sediment** (Tier 1) | G2a–G2d pass on 1k/200 public benchmark | Battery MRR **0.609** vs local-memory **0.457**; memex pending Go install | **partial** ([report](../src/battery/evals/comparative_benchmark_report.md)) | 🟡 |
 
 ---
 

@@ -385,6 +385,11 @@ def evaluate(
         "--phases",
         help="Sediment phases for --comparative: retrieval, latency, or all",
     ),
+    write_report: bool = typer.Option(
+        False,
+        "--write-report",
+        help="After --comparative run, generate comparative_benchmark_report.md",
+    ),
     markdown: bool = typer.Option(
         True, "--markdown/--no-markdown", help="Generate Markdown evaluation report"
     ),
@@ -411,7 +416,7 @@ def evaluate(
             "[cyan]Running Tier 1 comparative eval (Sediment benchmark)...[/cyan]\n"
             f"[dim]Systems: {systems} | Phases: {phases}[/dim]"
         )
-        run_sediment_benchmark(systems=systems, phases=phases)
+        run_sediment_benchmark(systems=systems, phases=phases, write_report=write_report)
         return
 
     if stress:

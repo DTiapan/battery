@@ -12,6 +12,8 @@ from battery.evals.sediment.battery_adapter import (
     BatteryHybridAdapter,
     BatteryVectorAdapter,
 )
+from battery.evals.sediment.local_memory_mcp_adapter import LocalMemoryMcpAdapter
+from battery.evals.sediment.memex_adapter import MemexAdapter, MemexHybridAdapter
 
 SEDIMENT_PIN_FILE = (
     Path(__file__).resolve().parents[4] / "vendor" / "sediment-benchmark" / ".battery-pin"
@@ -34,6 +36,9 @@ def register_battery_adapters(sediment_run) -> None:
     sediment_run.ADAPTERS["battery"] = BatteryHybridAdapter
     sediment_run.ADAPTERS["battery-bm25"] = BatteryBm25Adapter
     sediment_run.ADAPTERS["battery-vector"] = BatteryVectorAdapter
+    sediment_run.ADAPTERS["memex"] = MemexAdapter
+    sediment_run.ADAPTERS["memex-hybrid"] = MemexHybridAdapter
+    sediment_run.ADAPTERS["local-memory-mcp"] = LocalMemoryMcpAdapter
 
     try:
         from adapters.chromadb_baseline import ChromaDBAdapter
@@ -48,6 +53,7 @@ def run_sediment_benchmark(
     systems: str = "battery",
     phases: str = "retrieval",
     seed: int = 42,
+    write_report: bool = False,
 ) -> None:
     """Execute Tier 1 comparative eval via upstream Sediment run.py."""
     root = sediment_root()
@@ -69,6 +75,13 @@ def run_sediment_benchmark(
         letta_url="http://localhost:8283",
     )
     asyncio.run(sediment_run.main_async(args))
+
+    if write_report:
+        from battery.evals.sediment.report import write_comparative_report
+
+        system_list = [s.strip() for s in systems.split(",") if s.strip()]
+        path = write_comparative_report(system_list)
+        print(f"Comparative report written to {path}", flush=True)
 
 
 def main() -> None:
