@@ -28,6 +28,7 @@
 | Real-world | `battery eval --real` | 92 ADR/README memories | 30 dev queries | `src/battery/evals/realworld_benchmark_report.md` |
 | Rot (context poisoning) | `battery eval --rot` | 6 citation/prune scenarios | JIT verify + prune | `src/battery/evals/rot_benchmark_report.md` |
 | Handoff (polyglot) | `battery eval --handoff` | 6 export/load scenarios | Cursor ↔ Claude continuity | `src/battery/evals/handoff_benchmark_report.md` |
+| Dedup re-ingest | `battery eval --dedup-stress` | 500 corpus + 40% paraphrases | row reduction + MRR vs naive | `src/battery/evals/dedup_stress_report.md` |
 | Stress | `battery eval --stress` | 500 synthetic memories | 30 queries | `src/battery/evals/stress_test_report.md` |
 | Golden | `battery eval` | 15 curated | 15 queries | `src/battery/evals/benchmark_results.md` |
 | RRF tune | `battery eval --tune` | Real-world | 30 | `src/battery/evals/rrf_tuning_report.md` |
@@ -80,7 +81,8 @@
 | Feature | Version | Metric | Baseline | After | Target | Pass? |
 |---------|---------|--------|----------|-------|--------|-------|
 | Hybrid RRF k=5 | v0.2 | Real-world MRR | 0.855 (k=60 default) | 0.8583 | ≥ 0.85 | ✅ |
-| Near-dedup ≥0.88 | v0.3.1 | MRR regression | — | 0% dup rows on re-ingest (unit) | no MRR drop | 🟡 needs stress re-ingest eval |
+| Near-dedup ≥0.88 | v0.3.1 | Dup reduction on re-ingest | — | **97.0%** (194/200 rows) | ≥ 40% | ✅ |
+| Near-dedup ≥0.88 | v0.3.1 | MRR vs naive re-ingest | 0.8233 naive | **0.8428 dedup** | no regression | ✅ |
 | Cross-tool handoff | v0.3.0 | Handoff eval | — | manual | scenario pass | ✅ |
 | Profile export/import | v0.4.1 | Round-trip integrity | — | checksum tests pass | 100% bundle restore | ✅ |
 | Git post-commit capture | v0.4.1 | Episodic rows on commit | — | unit tests | 1 row/commit | ✅ |
@@ -96,7 +98,7 @@
 | **B** | Adaptive RRF + re-run `--real` / `--stress` | ✅ |
 | **C (rot)** | Rot suite (`battery eval --rot`) | ✅ |
 | **C (handoff)** | Handoff scenario eval (`battery eval --handoff`) | ✅ |
-| **C (dedup)** | Dedup re-ingest stress | next |
+| **C (dedup)** | Dedup re-ingest stress (`battery eval --dedup-stress`) | ✅ |
 
 ---
 

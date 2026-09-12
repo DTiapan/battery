@@ -357,6 +357,11 @@ def evaluate(
         "--handoff",
         help="Run cross-tool handoff scenario benchmark (Cursor ↔ Claude continuity)",
     ),
+    dedup_stress: bool = typer.Option(
+        False,
+        "--dedup-stress",
+        help="Run near-duplicate re-ingest stress benchmark (row bloat + MRR gate)",
+    ),
     tune: bool = typer.Option(
         False, "--tune", "-t", help="Run RRF k/weight grid sweep to find optimal parameters"
     ),
@@ -371,6 +376,7 @@ def evaluate(
       --real      Real-world benchmark on Battery's own ADR/README corpus (~100 items, 30 queries)
       --rot       Context rot benchmark: stale citation filtering + prune scenarios
       --handoff   Cross-tool handoff benchmark: export/load + lineage scenarios
+      --dedup-stress  Near-dup re-ingest stress: duplicate reduction + MRR gate
       --stress    500-item scaled stress test measuring throughput and latency under load
       --tune      RRF k/weight grid sweep: empirically find optimal hybrid search parameters
     """
@@ -396,6 +402,12 @@ def evaluate(
         from battery.evals.handoff_harness import run_handoff_benchmark
 
         run_handoff_benchmark(output_markdown=markdown)
+        return
+
+    if dedup_stress:
+        from battery.evals.dedup_stress_harness import run_dedup_stress_benchmark
+
+        run_dedup_stress_benchmark(scale=scale if stress else 500, output_markdown=markdown)
         return
 
     if tune:
