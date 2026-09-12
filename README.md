@@ -9,7 +9,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python: 3.11+](https://img.shields.io/badge/Python-3.11%2B-blue.svg)](https://www.python.org/)
 [![MCP: 2.x](https://img.shields.io/badge/MCP-2.x%20Compliant-green.svg)](https://modelcontextprotocol.io/)
-[![Version: 0.3.1](https://img.shields.io/badge/version-0.3.1-blue.svg)](pyproject.toml)
+[![Version: 0.4.1](https://img.shields.io/badge/version-0.4.1-blue.svg)](pyproject.toml)
 
 **Keywords:** local AI memory · MCP memory server · Cursor context · Claude Code memory · hybrid RAG · coding agent context · stale memory pruning · session checkpoints
 
@@ -102,6 +102,13 @@ uv run battery checkpoint list
 uv run battery checkpoint show --latest
 ```
 
+Capture landed work on every git commit:
+
+```bash
+uv run battery git install
+uv run battery git capture   # manual capture of HEAD commit
+```
+
 Prune memories that reference deleted files:
 
 ```bash
@@ -123,6 +130,21 @@ uv run battery handoff load --latest --ingest --to-client claude-code
 
 Artifacts are written to `.battery/handoff/` in your project. Claude Code `SessionStart` hooks auto-inject the latest handoff when present.
 
+### Move memory to another computer
+
+**Team / project context** — commit `BATTERY.md` to git; on the new machine clone and run `battery sync`.
+
+**Personal profile** — export a checksum-verified bundle:
+
+```bash
+battery profile export --profile default --out ~/battery-backup.battery-bundle --include-md
+# On new machine after installing Battery:
+battery profile import ~/battery-backup.battery-bundle --profile default --force
+battery profile inspect ~/battery-backup.battery-bundle   # view manifest only
+```
+
+Bundles contain `battery.db` (+ optional `BATTERY.md`). ONNX model weights (~90MB) are **not** included — they re-download on first embed.
+
 ---
 
 ## Features (v0.2)
@@ -132,6 +154,8 @@ Artifacts are written to `.battery/handoff/` in your project. Claude Code `Sessi
 - **MCP server** — tools, `battery://context` / `battery://rules` resources, `battery-context` prompt
 - **Context profiles** — isolate memory per repo or domain
 - **Session checkpoints** — Claude Code lifecycle hooks + `battery checkpoint`
+- **Git commit capture** — `battery git install` post-commit hook → episodic memory with `commit_sha`
+- **Profile portability** — `battery profile export/import` checksum-verified bundles
 - **Stale invalidation** — citation verify on recall + `battery prune`
 - **Near-duplicate merge** — semantic dedup on save (cosine ≥ 0.88 → merge, returns `similarTo`)
 - **Health checks** — `battery doctor` for DB, mirror sync, MCP, and hook adoption
@@ -207,8 +231,10 @@ uv run battery serve --profile payments-service
 | `battery serve` | Start MCP server (stdio) |
 | `battery setup --client all` | Register MCP in Cursor / Claude |
 | `battery profile create\|list` | Manage context profiles |
+| `battery profile export\|import\|inspect` | Portable `.battery-bundle` backup/restore |
 | `battery use <profile>` | Switch active profile |
 | `battery hook install\|uninstall` | Claude Code lifecycle hooks |
+| `battery git install\|capture` | Git post-commit episodic capture |
 | `battery handoff export\|load\|show` | Cross-tool session handoff (Cursor ↔ Claude) |
 | `battery checkpoint list\|show` | Inspect session checkpoints |
 | `battery prune [--dry-run]` | Remove stale file-cited memories |
@@ -261,7 +287,7 @@ Full reports: [`realworld_benchmark_report.md`](src/battery/evals/realworld_benc
 ## Development
 
 ```bash
-uv run pytest -v          # 41 tests
+uv run pytest -v          # 48 tests
 uv run battery doctor     # local health check
 ```
 

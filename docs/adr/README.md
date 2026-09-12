@@ -10,3 +10,4 @@ This directory contains Architecture Decision Records for the **Battery Context 
 | [0004](./0004-embedding-strategy-and-vector-pipeline.md) | Embedding Strategy and Local Vector Pipeline (ONNX + all-MiniLM-L6-v2) | Accepted | 2026-09-11 |
 | [0005](./0005-mcp-interface-and-living-markdown-mirror.md) | MCP Tool Interface and Living Markdown Mirror (`BATTERY.md`) | Accepted | 2026-09-11 |
 | [0006](./0006-multi-battery-context-profiles.md) | Multi-Battery Context Profiles and Memory Isolation | Accepted | 2026-09-11 |
+| [0007](./0007-tiered-memory-and-profile-portability.md) | Tiered Memory Lifecycle and Profile Portability Bundles | Accepted | 2026-09-12 |

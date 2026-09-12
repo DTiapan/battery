@@ -33,10 +33,12 @@ profile_app = typer.Typer(name="profile", help="Manage isolated multi-battery co
 hook_app = typer.Typer(name="hook", help="Install and run Claude Code lifecycle hooks.")
 checkpoint_app = typer.Typer(name="checkpoint", help="Inspect session checkpoints.")
 handoff_app = typer.Typer(name="handoff", help="Export and load cross-tool session handoffs.")
+git_app = typer.Typer(name="git", help="Git post-commit episodic capture.")
 app.add_typer(profile_app, name="profile")
 app.add_typer(hook_app, name="hook")
 app.add_typer(checkpoint_app, name="checkpoint")
 app.add_typer(handoff_app, name="handoff")
+app.add_typer(git_app, name="git")
 console = Console()
 
 
@@ -552,6 +554,186 @@ def doctor(
             f"[yellow]⚠ {report['passed']}/{report['total']} checks passed[/yellow]"
         )
         raise typer.Exit(code=1)
+
+
+@profile_app.command(name="export")
+def profile_export(
+    profile: Optional[str] = typer.Option(None, "--profile", "-p", help="Profile to export"),
+    out: Path = typer.Option(
+        Path("battery-export.battery-bundle"),
+        "--out",
+        "-o",
+        help="Output .battery-bundle path",
+    ),
+    include_md: bool = typer.Option(
+        False, "--include-md", help="Include BATTERY.md mirror snapshot in bundle"
+    ),
+    md_path: Optional[Path] = typer.Option(None, "--md", help="Path to BATTERY.md mirror"),
+):
+    """Exports a profile to a portable .battery-bundle archive."""
+    import importlib.metadata
+
+    from battery.portability import export_profile_bundle
+
+    prof = profile or get_active_profile()
+    try:
+        version = importlib.metadata.version("battery")
+    except importlib.metadata.PackageNotFoundError:
+        version = "0.0.0"
+
+    try:
+        result = export_profile_bundle(
+            profile=prof,
+            out_path=out,
+            md_path=md_path,
+            include_md=include_md,
+            battery_version=version,
+        )
+    except FileNotFoundError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+
+    console.print(
+        Panel.fit(
+            f"[green]✓ Exported profile [bold]{prof}[/bold][/green]\n"
+            f"Bundle: [dim]{result['path']}[/dim]\n"
+            f"Files: {', '.join(result['files'])}\n"
+            f"[dim]ONNX weights not included — re-download on first embed[/dim]",
+            title="Profile Export",
+        )
+    )
+
+
+@profile_app.command(name="import")
+def profile_import_cmd(
+    bundle: Path = typer.Argument(..., help="Path to .battery-bundle file"),
+    profile: Optional[str] = typer.Option(
+        None, "--profile", "-p", help="Target profile name (defaults to bundle manifest)"
+    ),
+    force: bool = typer.Option(False, "--force", "-f", help="Overwrite existing profile database"),
+    md_path: Optional[Path] = typer.Option(None, "--md", help="Restore BATTERY.md to this path"),
+):
+    """Imports a portable .battery-bundle archive into a local profile."""
+    from battery.portability import import_profile_bundle
+
+    try:
+        result = import_profile_bundle(
+            bundle,
+            profile=profile,
+            md_path=md_path,
+            force=force,
+        )
+    except (FileNotFoundError, FileExistsError, ValueError) as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+
+    lines = [
+        f"[green]✓ Imported profile [bold]{result['profile']}[/bold][/green]",
+        f"Database: [dim]{result['db_path']}[/dim]",
+        f"Schema: v{result['schema_version']}",
+    ]
+    if result.get("md_path"):
+        lines.append(f"Mirror: [dim]{result['md_path']}[/dim]")
+    console.print(Panel.fit("\n".join(lines), title="Profile Import"))
+
+
+@profile_app.command(name="inspect")
+def profile_inspect(
+    bundle: Path = typer.Argument(..., help="Path to .battery-bundle file"),
+):
+    """Shows manifest metadata for a bundle without importing."""
+    from battery.portability import inspect_bundle
+
+    try:
+        manifest = inspect_bundle(bundle)
+    except (FileNotFoundError, ValueError) as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+
+    table = Table(title="Battery Bundle")
+    table.add_column("Field", style="bold")
+    table.add_column("Value")
+    for key in (
+        "bundle_format",
+        "bundle_version",
+        "profile",
+        "schema_version",
+        "embedding_model",
+        "exported_at",
+        "battery_version",
+        "includes_mirror",
+    ):
+        if key in manifest:
+            table.add_row(key, str(manifest[key]))
+    console.print(table)
+
+
+@git_app.command(name="install")
+def git_install():
+    """Installs Battery post-commit hook in the current git repository."""
+    from battery.git_hooks import install_git_hook
+
+    try:
+        result = install_git_hook(Path.cwd())
+    except ValueError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+
+    status = "already present" if result.get("already_installed") else "installed"
+    console.print(
+        Panel.fit(
+            f"[green]✓ Git post-commit hook {status}[/green]\n"
+            f"Hook: [dim]{result['hook_path']}[/dim]",
+            title="Git Hook Install",
+        )
+    )
+
+
+@git_app.command(name="uninstall")
+def git_uninstall():
+    """Removes Battery post-commit hook from the current git repository."""
+    from battery.git_hooks import uninstall_git_hook
+
+    result = uninstall_git_hook(Path.cwd())
+    console.print(f"[green]✓ Removed Battery git hook[/green] ([dim]{result['hook_path']}[/dim])")
+
+
+@git_app.command(name="capture")
+def git_capture_cmd(
+    commit: Optional[str] = typer.Option(None, "--commit", help="Capture a specific commit SHA"),
+    quiet: bool = typer.Option(False, "--quiet", "-q", help="Suppress output (for git hooks)"),
+    profile: Optional[str] = typer.Option(None, "--profile", "-p", help="Target context profile"),
+    db_path: Optional[Path] = typer.Option(None, "--db", help="Path to SQLite database"),
+):
+    """Captures the latest git commit as episodic memory."""
+    from battery.git_capture import capture_commit
+
+    resolved_db, _ = resolve_paths(profile, db_path, None)
+    conn = get_connection(resolved_db)
+    init_db(conn)
+
+    try:
+        result = capture_commit(conn, Path.cwd(), commit_sha=commit)
+        conn.commit()
+    except (ValueError, RuntimeError) as exc:
+        if not quiet:
+            console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+
+    if quiet:
+        return
+
+    if result["status"] == "existing":
+        console.print(
+            f"[yellow]ℹ Commit [bold]{result['short_sha']}[/bold] already captured[/yellow]"
+        )
+        return
+
+    console.print(
+        f"[green]✓ Captured commit [bold]{result['short_sha']}[/bold] "
+        f"as episodic memory #{result['memory_id']}[/green] "
+        f"({result['files']} files)"
+    )
 
 
 @hook_app.command(name="install")

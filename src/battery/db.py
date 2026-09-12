@@ -24,7 +24,7 @@ from battery.config import DEFAULT_DB_PATH, EMBEDDING_DIM  # noqa: E402
 from battery.migrate import log_memory_event, migrate_db  # noqa: E402
 
 VALID_CATEGORIES = frozenset({"rule", "decision", "preference", "general", "episodic"})
-VALID_SOURCES = frozenset({"manual", "hook", "mcp", "cli", "handoff"})
+VALID_SOURCES = frozenset({"manual", "hook", "mcp", "cli", "handoff", "git"})
 VALID_STALENESS = frozenset({"valid", "stale", "missing"})
 
 
@@ -420,6 +420,21 @@ def list_memories(
 
     cursor = conn.execute(query, params)
     return [dict(row) for row in cursor.fetchall()]
+
+
+def memory_exists_for_commit(conn: sqlite3.Connection, commit_sha: str) -> bool:
+    """Returns True if an active memory already references this commit SHA."""
+    if not commit_sha:
+        return False
+    row = conn.execute(
+        """
+        SELECT 1 FROM memories
+        WHERE commit_sha = ? AND is_deleted = 0
+        LIMIT 1
+        """,
+        (commit_sha,),
+    ).fetchone()
+    return row is not None
 
 
 def insert_session_checkpoint(

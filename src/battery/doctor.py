@@ -12,6 +12,7 @@ except ImportError:
 
 from battery.config import EMBEDDING_DIM, get_profile_db_path, get_profile_md_path
 from battery.hooks import hooks_installed
+from battery.git_hooks import git_hook_installed
 from battery.migrate import SCHEMA_VERSION, get_schema_version, migrate_db
 from battery.sync import export_battery_md
 
@@ -121,6 +122,16 @@ def run_doctor(
                 hook_ok,
                 "Battery hooks installed" if hook_ok else "Claude Code hooks not installed",
                 "Run: battery hook install --scope project",
+            )
+        )
+
+        git_ok = git_hook_installed(root)
+        checks.append(
+            _check(
+                "git_post_commit",
+                git_ok,
+                "Git post-commit hook installed" if git_ok else "Git post-commit hook not installed",
+                "Run: battery git install",
             )
         )
 
