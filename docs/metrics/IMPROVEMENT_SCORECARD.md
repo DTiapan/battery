@@ -17,6 +17,7 @@
 | O4-KR1 | Stress-500 hybrid p95 latency | < 45 ms | 18.6 ms | **17.0 ms** | ✅ |
 | O2-KR2.1 | Rot benchmark stale-recall failures | 0 | — | **0 / 6 scenarios** | ✅ |
 | O2-KR2.2 | JIT verify p95 on rot suite | < 10 ms | — | **0.25 ms** | ✅ |
+| O1-KR1.3 | Handoff scenario eval | all pass | — | **6/6 scenarios** | ✅ |
 
 ---
 
@@ -26,6 +27,7 @@
 |-------|---------|--------|---------|--------|
 | Real-world | `battery eval --real` | 92 ADR/README memories | 30 dev queries | `src/battery/evals/realworld_benchmark_report.md` |
 | Rot (context poisoning) | `battery eval --rot` | 6 citation/prune scenarios | JIT verify + prune | `src/battery/evals/rot_benchmark_report.md` |
+| Handoff (polyglot) | `battery eval --handoff` | 6 export/load scenarios | Cursor ↔ Claude continuity | `src/battery/evals/handoff_benchmark_report.md` |
 | Stress | `battery eval --stress` | 500 synthetic memories | 30 queries | `src/battery/evals/stress_test_report.md` |
 | Golden | `battery eval` | 15 curated | 15 queries | `src/battery/evals/benchmark_results.md` |
 | RRF tune | `battery eval --tune` | Real-world | 30 | `src/battery/evals/rrf_tuning_report.md` |
@@ -79,7 +81,7 @@
 |---------|---------|--------|----------|-------|--------|-------|
 | Hybrid RRF k=5 | v0.2 | Real-world MRR | 0.855 (k=60 default) | 0.8583 | ≥ 0.85 | ✅ |
 | Near-dedup ≥0.88 | v0.3.1 | MRR regression | — | 0% dup rows on re-ingest (unit) | no MRR drop | 🟡 needs stress re-ingest eval |
-| Cross-tool handoff | v0.3.0 | Handoff eval | — | manual | scenario pass | 🟡 Sprint C |
+| Cross-tool handoff | v0.3.0 | Handoff eval | — | manual | scenario pass | ✅ |
 | Profile export/import | v0.4.1 | Round-trip integrity | — | checksum tests pass | 100% bundle restore | ✅ |
 | Git post-commit capture | v0.4.1 | Episodic rows on commit | — | unit tests | 1 row/commit | ✅ |
 | Adaptive RRF @ scale | v0.4.2 | Stress hybrid MRR | 0.7761 | **0.8594** | ≥ 0.8528 | ✅ |
@@ -93,7 +95,7 @@
 | **A** | This scorecard + AGENTS.md gate | ✅ |
 | **B** | Adaptive RRF + re-run `--real` / `--stress` | ✅ |
 | **C (rot)** | Rot suite (`battery eval --rot`) | ✅ |
-| **C (handoff)** | Handoff scenario eval | next |
+| **C (handoff)** | Handoff scenario eval (`battery eval --handoff`) | ✅ |
 | **C (dedup)** | Dedup re-ingest stress | next |
 
 ---

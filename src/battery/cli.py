@@ -352,6 +352,11 @@ def evaluate(
     rot: bool = typer.Option(
         False, "--rot", help="Run context rot benchmark (JIT verify + prune scenarios)"
     ),
+    handoff_eval: bool = typer.Option(
+        False,
+        "--handoff",
+        help="Run cross-tool handoff scenario benchmark (Cursor ↔ Claude continuity)",
+    ),
     tune: bool = typer.Option(
         False, "--tune", "-t", help="Run RRF k/weight grid sweep to find optimal parameters"
     ),
@@ -365,6 +370,7 @@ def evaluate(
       (default)   Golden 15-query benchmark on curated seed dataset
       --real      Real-world benchmark on Battery's own ADR/README corpus (~100 items, 30 queries)
       --rot       Context rot benchmark: stale citation filtering + prune scenarios
+      --handoff   Cross-tool handoff benchmark: export/load + lineage scenarios
       --stress    500-item scaled stress test measuring throughput and latency under load
       --tune      RRF k/weight grid sweep: empirically find optimal hybrid search parameters
     """
@@ -384,6 +390,12 @@ def evaluate(
         from battery.evals.rot_harness import run_rot_benchmark
 
         run_rot_benchmark(output_markdown=markdown)
+        return
+
+    if handoff_eval:
+        from battery.evals.handoff_harness import run_handoff_benchmark
+
+        run_handoff_benchmark(output_markdown=markdown)
         return
 
     if tune:
