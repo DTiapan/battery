@@ -1,6 +1,14 @@
 # Comparative Eval — Environment Setup
 
-Companion to [COMPARATIVE_EVAL_SPEC.md](./COMPARATIVE_EVAL_SPEC.md) (v2).
+Companion to [COMPARATIVE_EVAL_SPEC.md](./COMPARATIVE_EVAL_SPEC.md) (v2).  
+**Frozen results:** [BENCHMARK_RESULTS.md](./BENCHMARK_RESULTS.md) · [comparative_benchmark_report.md](../../src/battery/evals/comparative_benchmark_report.md)
+
+## Quick install (recommended)
+
+```bash
+bash scripts/install-benchmark-deps.sh
+export PATH="$(go env GOPATH)/bin:${HOME}/.local/bin:$PATH"
+```
 
 ## Overview
 

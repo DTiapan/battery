@@ -13,6 +13,22 @@
 
 **Keywords:** local AI memory · MCP memory server · Cursor context · Claude Code memory · hybrid RAG · coding agent context · stale memory pruning · session checkpoints
 
+**Benchmarks:** [Tier 1 comparative results](docs/evals/BENCHMARK_RESULTS.md) — Battery MRR **0.609** vs memex **0.512** on public Sediment 1k/200.
+
+---
+
+## Table of contents
+
+1. [What is Battery?](#what-is-battery)
+2. [When to use it](#when-to-use-battery)
+3. [Quick start](#quick-start)
+4. [Step-by-step guides](#step-by-step-guides)
+5. [Connect to AI assistants](#connect-to-ai-assistants)
+6. [CLI reference](#cli-reference)
+7. [Benchmarks](#retrieval-benchmarks)
+8. [Development](#development)
+9. [Documentation](#documentation)
+
 ---
 
 ## What is Battery?
@@ -44,6 +60,23 @@ Developers using multiple AI tools hit the same walls:
 4. **Cloud memory lock-in** — hosted memory services store proprietary context on third-party servers.
 
 Battery keeps memory **on your machine**, searchable, versionable, and pluggable into any MCP-native agent.
+
+---
+
+## When to use Battery
+
+| Situation | What to run |
+|-----------|-------------|
+| **New project** — give agents durable context | `battery onboard` in the repo root |
+| **Daily coding** — agent should recall rules/decisions | MCP `recall_memory` in Cursor / Claude (via `battery setup`) |
+| **Switch tools** — Cursor → Claude Code | `battery handoff export` / `handoff load` |
+| **Session ends** — capture what was decided | `battery hook install` (Claude Code) |
+| **Git commit** — episodic “what shipped” memory | `battery git install` |
+| **Stale paths** — memory cites deleted files | `battery prune` |
+| **New machine** — restore context | Commit `BATTERY.md` to git, or `battery profile export/import` |
+| **Verify retrieval quality** | `battery eval --real` or full [comparative benchmark](docs/evals/BENCHMARK_RESULTS.md) |
+
+**Where it runs:** project directory (`battery.db` + `BATTERY.md`). MCP clients connect via `battery serve` (stdio). No server port, no cloud.
 
 ---
 
@@ -153,7 +186,92 @@ Bundles contain `battery.db` (+ optional `BATTERY.md`). ONNX model weights (~90M
 
 ---
 
-## Features (v0.2)
+## Step-by-step guides
+
+### A. First-time setup in a repo (5 minutes)
+
+```bash
+cd /path/to/your/project
+uv run battery onboard          # init DB, seed memories, MCP config, doctor
+uv run battery doctor --adoption # confirm MCP resources + recall smoke
+```
+
+In Cursor or Claude Desktop, ask the agent to `recall_memory` for a project rule you saved.
+
+### B. Save context the agent should remember
+
+```bash
+# CLI
+uv run battery add "Use PostgreSQL on port 5432" -c decision
+uv run battery add "All API handlers return typed errors" -c rule
+
+# Or via MCP in chat
+# save_memory(content="...", category="decision")
+```
+
+Categories: `rule`, `decision`, `preference`, `general`, `episodic`.
+
+### C. Connect MCP to your editor
+
+```bash
+uv run battery setup --client cursor    # or claude | all
+uv run battery serve                    # stdio MCP (clients spawn this)
+```
+
+**Cursor:** Settings → Features → MCP → confirm `battery` server.  
+**Claude Desktop:** `~/Library/Application Support/Claude/claude_desktop_config.json` — see [manual config](#manual-mcp-config-claude-desktop).
+
+### D. Auto-capture sessions (Claude Code)
+
+```bash
+uv run battery hook install --scope project
+uv run battery checkpoint list
+```
+
+Hooks run on session end and pre-compaction. Checkpoints are episodic — not injected by default (search/handoff only).
+
+### E. Hand off between Cursor and Claude Code
+
+```bash
+# Before leaving Cursor
+uv run battery handoff export --from-client cursor --to-client claude-code
+
+# In Claude Code session
+uv run battery handoff load --latest --ingest
+```
+
+Artifacts: `.battery/handoff/` in your project.
+
+### F. Team portability via git
+
+```bash
+# Developer A — commit the mirror
+git add BATTERY.md && git commit -m "Update agent context"
+
+# Developer B — clone and sync
+git pull
+uv run battery onboard   # or: battery sync to import BATTERY.md edits
+```
+
+### G. Run benchmarks (verify retrieval)
+
+```bash
+# Battery-only real-world corpus (fast, ~30s)
+uv run battery eval --real
+
+# Full Tier 1 comparative vs memex + local-memory-mcp (needs Go + Node)
+bash scripts/install-benchmark-deps.sh
+export PATH="$(go env GOPATH)/bin:${HOME}/.local/bin:$PATH"
+uv run battery eval --comparative \
+  --systems battery,chromadb,memex,local-memory-mcp \
+  --phases retrieval --write-report
+```
+
+See [docs/evals/BENCHMARK_RESULTS.md](docs/evals/BENCHMARK_RESULTS.md) for frozen results and reproduction steps.
+
+---
+
+## Features (v0.5)
 
 - **Hybrid retrieval** — BM25 + vector cosine similarity, fused with tuned RRF (k=5)
 - **Living mirror** — bidirectional sync between SQLite and `BATTERY.md`
@@ -165,7 +283,8 @@ Bundles contain `battery.db` (+ optional `BATTERY.md`). ONNX model weights (~90M
 - **Stale invalidation** — citation verify on recall + `battery prune`
 - **Near-duplicate merge** — semantic dedup on save (cosine ≥ 0.88 → merge, returns `similarTo`)
 - **Health checks** — `battery doctor` for DB, mirror sync, MCP, and hook adoption
-- **Eval harness** — `battery eval` with real-world and stress-test corpora
+- **Eval harness** — `battery eval` with real-world, stress, rot, handoff, and comparative Sediment benchmarks
+- **Onboarding** — `battery onboard` + `doctor --adoption` for one-shot project setup
 
 ---
 
@@ -246,7 +365,8 @@ uv run battery serve --profile payments-service
 | `battery checkpoint list\|show` | Inspect session checkpoints |
 | `battery prune [--dry-run]` | Remove stale file-cited memories |
 | `battery doctor [--adoption]` | Health and setup diagnostics |
-| `battery eval [--real]` | Run retrieval benchmarks |
+| `battery eval [--real\|--stress\|--rot\|--handoff]` | Run retrieval benchmarks |
+| `battery eval --comparative [--write-report]` | Tier 1 Sediment vs memex / local-memory-mcp |
 
 ---
 
@@ -279,7 +399,30 @@ Deep dives: [Architecture Decision Records](docs/adr/) · [Product roadmap](docs
 
 ## Retrieval benchmarks
 
-Real-world corpus (92 engineering memories, 30 developer queries — `battery eval --real`):
+### Tier 1 — Comparative (public Sediment benchmark, frozen 2026-09-12)
+
+Same harness, same 1,000 memories and 200 queries for every system. [Full results →](docs/evals/BENCHMARK_RESULTS.md)
+
+| System | MRR | Recall@5 |
+|--------|----:|---------:|
+| **Battery hybrid** | **0.609** | **0.790** |
+| ChromaDB (vector baseline) | 0.611 | 0.785 |
+| memex v0.6.0 | 0.512 | 0.635 |
+| local-memory-mcp 1.0.7 | 0.457 | 0.600 |
+
+Launch gates **G2a–G2d passed.** Reproduce:
+
+```bash
+bash scripts/install-benchmark-deps.sh
+export PATH="$(go env GOPATH)/bin:${HOME}/.local/bin:$PATH"
+uv run battery eval --comparative --systems battery,memex,local-memory-mcp --phases retrieval --write-report
+```
+
+Reports: [`comparative_benchmark_report.md`](src/battery/evals/comparative_benchmark_report.md) · [setup guide](docs/evals/COMPARATIVE_SETUP.md) · [spec](docs/evals/COMPARATIVE_EVAL_SPEC.md)
+
+### Real-world (Battery ADR/README corpus)
+
+`battery eval --real` — 92 engineering memories, 30 developer queries:
 
 | Strategy | Hit@1 | MRR | p50 latency |
 |----------|------:|----:|------------:|
@@ -287,17 +430,16 @@ Real-world corpus (92 engineering memories, 30 developer queries — `battery ev
 | Vector (sqlite-vec) | 83.3% | 0.89 | 25.3ms |
 | **Battery hybrid (adaptive RRF)** | **86.7%** | **0.91** | 25.3ms |
 
-Full reports: [`realworld_benchmark_report.md`](src/battery/evals/realworld_benchmark_report.md) · [`stress_test_report.md`](src/battery/evals/stress_test_report.md)
-
-**Comparative (pre-launch proof):** [Sediment Tier 1 report](src/battery/evals/comparative_benchmark_report.md) — Battery MRR **0.609** vs local-memory-mcp **0.457** (1k/200); memex run pending. [Spec](docs/evals/COMPARATIVE_EVAL_SPEC.md).
+More reports: [`realworld_benchmark_report.md`](src/battery/evals/realworld_benchmark_report.md) · [`stress_test_report.md`](src/battery/evals/stress_test_report.md) · [`scorecard`](docs/metrics/IMPROVEMENT_SCORECARD.md)
 
 ---
 
 ## Development
 
 ```bash
-uv run pytest -v          # 57 tests
+uv run pytest -v          # 60 tests
 uv run battery doctor     # local health check
+uv run battery eval --real  # quick retrieval sanity check
 ```
 
 ---
@@ -306,7 +448,11 @@ uv run battery doctor     # local health check
 
 | Doc | Contents |
 |-----|----------|
-| [Product roadmap](docs/roadmap/PRODUCT_ROADMAP.md) | Priorities, market validation, v0.2+ plan |
+| [Benchmark results](docs/evals/BENCHMARK_RESULTS.md) | Tier 1 comparative summary + LinkedIn starter + reproduce steps |
+| [Comparative setup](docs/evals/COMPARATIVE_SETUP.md) | Install memex, Node, ChromaDB; run Sediment harness |
+| [Comparative spec](docs/evals/COMPARATIVE_EVAL_SPEC.md) | G2 gates, methodology, stop rule |
+| [Improvement scorecard](docs/metrics/IMPROVEMENT_SCORECARD.md) | Baseline → delta → pass/fail for every ship gate |
+| [Product roadmap](docs/roadmap/PRODUCT_ROADMAP.md) | Priorities, market validation, v0.5+ plan |
 | [ADRs](docs/adr/) | Storage, retrieval, MCP, profiles, runtime stack |
 | [Master spec](docs/design/battery-master-spec.md) | Full system specification |
 | [BATTERY.md example](BATTERY.md) | Living mirror format |

@@ -19,7 +19,7 @@
 | O2-KR2.2 | JIT verify p95 on rot suite | < 10 ms | — | **0.25 ms** | ✅ |
 | O1-KR1.3 | Handoff scenario eval | all pass | — | **6/6 scenarios** | ✅ |
 | O3-KR3.1 | Onboard adoption doctor (seed + resources + recall) | all core checks pass | — | **mcp_context + mcp_rules + recall_smoke** | ✅ |
-| **G2** | Comparative eval vs memex + local-memory-mcp on **Sediment** (Tier 1) | G2a–G2d pass on 1k/200 public benchmark | Battery MRR **0.609** vs local-memory **0.457**; memex pending Go install | **partial** ([report](../src/battery/evals/comparative_benchmark_report.md)) | 🟡 |
+| **G2** | Comparative eval vs memex + local-memory-mcp on **Sediment** (Tier 1) | G2a–G2d pass on 1k/200 public benchmark | Battery MRR **0.609** vs memex **0.512**, local-memory **0.457**; Recall@5 **0.790** vs ChromaDB **0.785** | **G2a–G2d pass** ([report](../src/battery/evals/comparative_benchmark_report.md)) | ✅ |
 
 ---
 
@@ -34,7 +34,7 @@
 | Stress | `battery eval --stress` | 500 synthetic memories | 30 queries | `src/battery/evals/stress_test_report.md` |
 | Golden | `battery eval` | 15 curated | 15 queries | `src/battery/evals/benchmark_results.md` |
 | RRF tune | `battery eval --tune` | Real-world | 30 | `src/battery/evals/rrf_tuning_report.md` |
-| **Comparative (G2)** | `battery eval --comparative --tier sediment` *(planned)* | Sediment 1k/200 (primary) + Battery RW 92/30 (supplementary) | vs memex, local-memory-mcp, ChromaDB | [spec v2](../evals/COMPARATIVE_EVAL_SPEC.md) → `comparative_benchmark_report.md` |
+| **Comparative (G2)** | `battery eval --comparative --tier sediment --write-report` | Sediment 1k/200 (primary) + Battery RW 92/30 (supplementary) | vs memex, memex-hybrid, local-memory-mcp, ChromaDB | [spec v2](../evals/COMPARATIVE_EVAL_SPEC.md) → `comparative_benchmark_report.md` |
 
 ---
 
@@ -104,7 +104,7 @@
 | **C (handoff)** | Handoff scenario eval (`battery eval --handoff`) | ✅ |
 | **C (dedup)** | Dedup re-ingest stress (`battery eval --dedup-stress`) | ✅ |
 | **NOW-3** | `battery onboard` + `doctor --adoption` resource/recall checks | ✅ |
-| **G2 comparative** | Spec → run → report → **stop** | 🟡 spec done |
+| **G2 comparative** | Spec → run → report → **stop** | ✅ frozen report 2026-09-12 |
 
 ---
 

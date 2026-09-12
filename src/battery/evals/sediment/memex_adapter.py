@@ -35,6 +35,8 @@ def _map_memex_type(metadata: dict | None) -> str:
 def _parse_memex_recall(text: str) -> list[dict[str, Any]]:
     """Parse memex recall text into {id, content} dicts."""
     payload = parse_tool_payload(text)
+    if isinstance(payload, list):
+        return [_normalize_memex_item(item) for item in payload if _normalize_memex_item(item)]
     if isinstance(payload, dict):
         for key in ("results", "memories", "items"):
             items = payload.get(key)
