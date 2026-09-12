@@ -15,6 +15,8 @@
 | O1-KR1 | Real-world hybrid Hit@1 | ≥ 83% (30/30 stretch) | 83.3% (25/30) | **86.7%** (26/30, 0 Hit@0) | ✅ |
 | O4-KR1 | Stress-500 hybrid MRR ≥ vector | hybrid ≥ vector | 0.7761 vs 0.8528 | **0.8594 vs 0.8528** | ✅ |
 | O4-KR1 | Stress-500 hybrid p95 latency | < 45 ms | 18.6 ms | **17.0 ms** | ✅ |
+| O2-KR2.1 | Rot benchmark stale-recall failures | 0 | — | **0 / 6 scenarios** | ✅ |
+| O2-KR2.2 | JIT verify p95 on rot suite | < 10 ms | — | **0.25 ms** | ✅ |
 
 ---
 
@@ -23,6 +25,7 @@
 | Suite | Command | Corpus | Queries | Report |
 |-------|---------|--------|---------|--------|
 | Real-world | `battery eval --real` | 92 ADR/README memories | 30 dev queries | `src/battery/evals/realworld_benchmark_report.md` |
+| Rot (context poisoning) | `battery eval --rot` | 6 citation/prune scenarios | JIT verify + prune | `src/battery/evals/rot_benchmark_report.md` |
 | Stress | `battery eval --stress` | 500 synthetic memories | 30 queries | `src/battery/evals/stress_test_report.md` |
 | Golden | `battery eval` | 15 curated | 15 queries | `src/battery/evals/benchmark_results.md` |
 | RRF tune | `battery eval --tune` | Real-world | 30 | `src/battery/evals/rrf_tuning_report.md` |
@@ -89,7 +92,9 @@
 |--------|-------------|---------------|
 | **A** | This scorecard + AGENTS.md gate | ✅ |
 | **B** | Adaptive RRF + re-run `--real` / `--stress` | ✅ |
-| **C** | Rot suite, dedup re-ingest stress, handoff scenario | **next** |
+| **C (rot)** | Rot suite (`battery eval --rot`) | ✅ |
+| **C (handoff)** | Handoff scenario eval | next |
+| **C (dedup)** | Dedup re-ingest stress | next |
 
 ---
 

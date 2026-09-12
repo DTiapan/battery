@@ -13,8 +13,8 @@
 
 | Priority | What | Why (impact) |
 |----------|------|--------------|
-| 1 | **Commit v0.4.2** (scorecard + adaptive RRF + corpus fixes) | Lock measurement baseline before next sprint |
-| 2 | **Sprint C evals** | Rot suite (O2), handoff scenario (O1-KR1.3), dedup re-ingest stress |
+| 1 | ~~Commit v0.4.2~~ | Done (`7fc2e2e`) |
+| 2 | **Sprint C** | Rot suite ✅; handoff scenario + dedup re-ingest stress next |
 | 3 | **NOW-3 adoption** | `battery doctor --adoption` + setup docs — get real users to <5 min recall |
 | 4 | **5 user interviews** | Roadmap confidence debt; validate model-switch / rot pain |
 
@@ -61,6 +61,7 @@ Research paper: **LATER** — gates in [`PRODUCT_ROADMAP.md` §8](../roadmap/PRO
 ## Next build candidates (impact order)
 
 1. ~~Retrieval quality pass (500-item hybrid MRR)~~ — v0.4.2
-2. **Sprint C** — rot eval suite, handoff eval scenario, dedup re-ingest stress
-3. **NOW-3** — adoption path (`doctor --adoption`, session-start resource wiring docs)
-4. Session log ingestion opt-in (NEXT-4) — only after C + adoption signal
+2. ~~Rot eval suite~~ — `battery eval --rot` (6/6 pass)
+3. **Handoff scenario eval** — Cursor ↔ Claude scripted resume
+4. **Dedup re-ingest stress** — ≥40% dup reduction, no MRR regression
+5. **NOW-3** — adoption path (`doctor --adoption`, session-start resource wiring docs)

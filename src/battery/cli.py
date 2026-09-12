@@ -349,6 +349,9 @@ def evaluate(
     real: bool = typer.Option(
         False, "--real", "-r", help="Run real-world evaluation on Battery's own ADR/README corpus"
     ),
+    rot: bool = typer.Option(
+        False, "--rot", help="Run context rot benchmark (JIT verify + prune scenarios)"
+    ),
     tune: bool = typer.Option(
         False, "--tune", "-t", help="Run RRF k/weight grid sweep to find optimal parameters"
     ),
@@ -361,6 +364,7 @@ def evaluate(
     Modes:
       (default)   Golden 15-query benchmark on curated seed dataset
       --real      Real-world benchmark on Battery's own ADR/README corpus (~100 items, 30 queries)
+      --rot       Context rot benchmark: stale citation filtering + prune scenarios
       --stress    500-item scaled stress test measuring throughput and latency under load
       --tune      RRF k/weight grid sweep: empirically find optimal hybrid search parameters
     """
@@ -374,6 +378,12 @@ def evaluate(
         from battery.evals.realworld_harness import run_realworld_evaluation
 
         run_realworld_evaluation(output_markdown=markdown)
+        return
+
+    if rot:
+        from battery.evals.rot_harness import run_rot_benchmark
+
+        run_rot_benchmark(output_markdown=markdown)
         return
 
     if tune:
