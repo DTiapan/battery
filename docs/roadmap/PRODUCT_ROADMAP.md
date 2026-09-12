@@ -238,6 +238,39 @@ Per [Now / Next / Later](../../.agents/skills/roadmap-communicator/references/ro
 | **Autonomous Session Summarizer (LLM-assisted)** | P4 | Optional local Ollama summarization of checkpoints into hierarchical memory (L1 summary → L3 detail on demand; [hmem pattern](https://news.ycombinator.com/item?id=47103237)) |
 | **Go V2 Daemon** | Platform | ADR-0002 Phase 2: single binary, UDS multi-client, <5ms cold start |
 | **Cross-Profile Search** | P5 edge case | Explicit opt-in federated recall across profiles |
+| **Research Publication** | Impact & credibility | See [§8 Research & External Impact](#8-research--external-impact-long-term-goal) |
+
+---
+
+## 8. Research & External Impact (Long-Term Goal)
+
+> **Status:** Deferred — not a near-term build priority.  
+> **North star:** Real user impact first; publication follows evidence, not the reverse.
+
+Battery is **not yet submission-ready** as a novel-methods paper. Core components (hybrid RRF, sqlite-vec + FTS5, MCP memory, git-committable markdown, adaptive fusion) overlap prior art including vstash, QARF, OwnMem, MemForge, and Git Context Controller. A credible publication path requires **integration + measurement** claims backed by comparative evals, not “we invented hybrid search.”
+
+### When to pursue
+
+| Gate | Requirement |
+|------|-------------|
+| **G1 — Product proof** | Capture → verify → handoff loop shipped and validated (O1 + O2 OKRs green on scorecard) |
+| **G2 — Comparative eval** | Head-to-head on open harness vs fixed RRF, IDF-adaptive RRF, and ≥1 markdown-only baseline |
+| **G3 — End-to-end signal** | At least one standard external benchmark (e.g. LongMemEval-S retrieval or agent task ablation) |
+| **G4 — Artifact** | Reproducible harness + paper positioning memo (contributions, related work, honest deltas) |
+
+### Plausible framing (when gates pass)
+
+- **Systems / workshop track:** local-first memory substrate for polyglot coding agents — living mirror + tiered SQLite + MCP lifecycle.
+- **Benchmark track:** real-world coding-agent memory eval harness (92 ADR-grounded memories, 30 dev queries).
+- **Not claiming:** novel hybrid retrieval algorithm (prior art exists).
+
+### Sequencing
+
+1. Ship and measure user-facing pain relief (NOW-3 adoption, Sprint C rot/handoff evals).  
+2. Open eval harness + baseline comparisons.  
+3. Draft related-work matrix; only then target workshop or arXiv systems note.
+
+**Owner checkpoint:** Revisit after Sprint C complete and 5+ user interviews (roadmap validation debt).
 
 ---
 

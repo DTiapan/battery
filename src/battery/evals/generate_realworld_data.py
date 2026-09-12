@@ -188,7 +188,8 @@ REALWORLD_CORPUS_RAW: List[tuple] = [
     (
         "The BATTERY.md Living Mirror pattern: when a memory is saved to SQLite, the engine "
         "immediately writes an atomic human-readable BATTERY.md file grouped by categories "
-        "(Rules, Decisions, Preferences). This file is git-committable.",
+        "(Rules, Decisions, Preferences). Developers inspect what the AI agent stored by "
+        "reading BATTERY.md in the IDE or repo — no SQL queries required. This file is git-committable.",
         "decision",
         1.4,
         "battery-md-mirror",
@@ -202,8 +203,9 @@ REALWORLD_CORPUS_RAW: List[tuple] = [
         "battery-md-sync",
     ),
     (
-        "Battery rejects opaque database with REST/CLI only because it has zero transparency for "
-        "users — developers cannot audit what the LLM remembered without running SQL queries.",
+        "Battery rejected opaque database-only storage (REST/CLI with no workspace artifact) "
+        "because memory is trapped in a black box — no git-diffable file for humans to audit "
+        "what the LLM remembered.",
         "decision",
         1.1,
         "reject-opaque-db",
@@ -217,8 +219,9 @@ REALWORLD_CORPUS_RAW: List[tuple] = [
     ),
     # ── ADR 0006: Multi-Battery Context Profiles ───────────────────────────
     (
-        "Battery uses physical database partitioning per profile: each profile has its own independent "
-        "SQLite file at ~/.battery/profiles/<profile>/battery.db with its own FTS5 index and vec0 table.",
+        "Battery context profiles keep separate memories for different client projects: each profile "
+        "has its own independent SQLite file at ~/.battery/profiles/<profile>/battery.db with "
+        "its own FTS5 index and vec0 table. Switch active context with `battery use <profile>`.",
         "decision",
         1.4,
         "physical-profile-isolation",

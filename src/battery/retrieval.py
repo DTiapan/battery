@@ -6,7 +6,14 @@ except ImportError:
     import sqlite3
 from typing import Any, Dict, List, Optional
 
-from battery.config import DEFAULT_TEXT_WEIGHT, DEFAULT_VEC_WEIGHT, RRF_K
+from battery.config import (
+    DEFAULT_TEXT_WEIGHT,
+    DEFAULT_VEC_WEIGHT,
+    LARGE_CORPUS_RRF_THRESHOLD,
+    LARGE_CORPUS_TEXT_WEIGHT,
+    LARGE_CORPUS_VEC_WEIGHT,
+    RRF_K,
+)
 from battery.db import serialize_vector
 from battery.embeddings import embed_text
 from battery.verify import filter_verified_results
@@ -222,6 +229,20 @@ def search_vector(
     return results
 
 
+def _resolve_rrf_weights(
+    memory_count: int,
+    text_weight: float,
+    vec_weight: float,
+) -> tuple[float, float]:
+    """Lean on vector fusion when the corpus is large and defaults are in use."""
+    using_defaults = (
+        text_weight == DEFAULT_TEXT_WEIGHT and vec_weight == DEFAULT_VEC_WEIGHT
+    )
+    if memory_count >= LARGE_CORPUS_RRF_THRESHOLD and using_defaults:
+        return LARGE_CORPUS_TEXT_WEIGHT, LARGE_CORPUS_VEC_WEIGHT
+    return text_weight, vec_weight
+
+
 def _active_memory_filter_sql(category: Optional[str]) -> tuple[str, List[Any]]:
     """SQL fragment restricting to active, valid memories."""
     sql = " AND m.is_deleted = 0 AND m.staleness = 'valid'"
@@ -289,11 +310,13 @@ def hybrid_search(
     for rank_idx, row in enumerate(cursor.fetchall()):
         vec_ranks[row["memory_id"]] = rank_idx + 1
 
-    # If corpus is large and BM25 found nothing, lean on vector ordering
     memory_count = conn.execute(
         "SELECT COUNT(*) FROM memories WHERE is_deleted = 0"
     ).fetchone()[0]
-    if memory_count >= 200 and not bm25_ranks and vec_ranks:
+    text_weight, vec_weight = _resolve_rrf_weights(memory_count, text_weight, vec_weight)
+
+    # If corpus is large and BM25 found nothing, lean on vector ordering
+    if memory_count >= LARGE_CORPUS_RRF_THRESHOLD and not bm25_ranks and vec_ranks:
         results = search_vector(conn, query_clean, limit=limit, category=category)
         for record in results:
             record["rrf_score"] = record.get("score", 0.0)

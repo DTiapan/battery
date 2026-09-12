@@ -50,3 +50,34 @@ def test_category_filtering(populated_db):
     results = hybrid_search(populated_db, "format", category="rule", limit=5)
     for r in results:
         assert r["category"] == "rule"
+
+
+def test_adaptive_rrf_weights_small_corpus(populated_db):
+    from battery.retrieval import _resolve_rrf_weights
+    from battery.config import DEFAULT_TEXT_WEIGHT, DEFAULT_VEC_WEIGHT
+
+    tw, vw = _resolve_rrf_weights(5, DEFAULT_TEXT_WEIGHT, DEFAULT_VEC_WEIGHT)
+    assert tw == DEFAULT_TEXT_WEIGHT
+    assert vw == DEFAULT_VEC_WEIGHT
+
+
+def test_adaptive_rrf_weights_large_corpus():
+    from battery.retrieval import _resolve_rrf_weights
+    from battery.config import (
+        DEFAULT_TEXT_WEIGHT,
+        DEFAULT_VEC_WEIGHT,
+        LARGE_CORPUS_RRF_THRESHOLD,
+        LARGE_CORPUS_TEXT_WEIGHT,
+        LARGE_CORPUS_VEC_WEIGHT,
+    )
+
+    tw, vw = _resolve_rrf_weights(
+        LARGE_CORPUS_RRF_THRESHOLD, DEFAULT_TEXT_WEIGHT, DEFAULT_VEC_WEIGHT
+    )
+    assert tw == LARGE_CORPUS_TEXT_WEIGHT
+    assert vw == LARGE_CORPUS_VEC_WEIGHT
+
+    # Explicit overrides are preserved at scale
+    tw, vw = _resolve_rrf_weights(LARGE_CORPUS_RRF_THRESHOLD, 0.6, 0.4)
+    assert tw == 0.6
+    assert vw == 0.4

@@ -44,6 +44,13 @@ RRF_K = 5
 DEFAULT_TEXT_WEIGHT = 0.5
 DEFAULT_VEC_WEIGHT = 0.5
 
+# Adaptive RRF: real-world corpus (≤92 items) peaks at tw=0.5; at 500+ memories BM25
+# OR-matching injects noisy top ranks and tw=0.5 hybrid MRR regresses below vector-only.
+# Grid sweep on stress-500 (2026-09-12): tw=0.1, vw=0.9 → MRR=0.8594 vs vector 0.8528.
+LARGE_CORPUS_RRF_THRESHOLD = 200
+LARGE_CORPUS_TEXT_WEIGHT = 0.1
+LARGE_CORPUS_VEC_WEIGHT = 0.9
+
 # Near-duplicate merge threshold (cosine similarity). See NEXT-2 in PRODUCT_ROADMAP.md.
 NEAR_DUP_THRESHOLD = 0.88
 

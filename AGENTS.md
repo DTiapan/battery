@@ -28,8 +28,13 @@
 
 1. [`docs/adr/README.md`](docs/adr/README.md) — architecture decisions
 2. [`docs/roadmap/PRODUCT_ROADMAP.md`](docs/roadmap/PRODUCT_ROADMAP.md) — priorities
-3. [`docs/design/battery-master-spec.md`](docs/design/battery-master-spec.md) — system spec
-4. [`docs/design/cross-verification-audit.md`](docs/design/cross-verification-audit.md) — assumption ledger
+3. [`docs/metrics/IMPROVEMENT_SCORECARD.md`](docs/metrics/IMPROVEMENT_SCORECARD.md) — baseline → delta → pass/fail
+4. [`docs/design/battery-master-spec.md`](docs/design/battery-master-spec.md) — system spec
+5. [`docs/design/cross-verification-audit.md`](docs/design/cross-verification-audit.md) — assumption ledger
+
+## Ship gate
+
+**No feature merges without a scorecard row** in [`docs/metrics/IMPROVEMENT_SCORECARD.md`](docs/metrics/IMPROVEMENT_SCORECARD.md): baseline metric, post-change metric, target, pass/fail. Run `uv run battery eval --real` and/or `--stress` when retrieval is touched.
 
 ## Memory model (ADR-0007)
 
