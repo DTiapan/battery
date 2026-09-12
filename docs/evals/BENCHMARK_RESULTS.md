@@ -101,32 +101,3 @@ Setup details: [COMPARATIVE_SETUP.md](./COMPARATIVE_SETUP.md)
 | Go | 1.27.1 |
 | Host | Darwin arm64 |
 | Sediment SHA | `49ab23a245564111f9cc147fbb8e82885ffad7d6` |
-
----
-
-## Caveats for publication
-
-1. **ChromaDB** had 6 ONNX store errors (994/1000 stored) on the reference machine — treat as indicative.
-2. **Battery** skipped 2 memories via content-hash dedup (998/1000) — documented, queries unaffected.
-3. **Latency:** memex and local-memory-mcp are faster at recall p95 (~2–7 ms vs Battery ~15 ms).
-4. **Single-machine run** — reproducible via CLI, not multi-host validated.
-
----
-
-## Suggested LinkedIn post (copy-paste starter)
-
-> Most local AI memory tools for coding agents can't prove retrieval quality — they ship scale tests or private corpora.
->
-> I built **Battery** — local hybrid memory (BM25 + vectors + RRF) as an MCP server for Cursor and Claude Code — and ran it through the **public Sediment benchmark**: 1,000 dev memories, 200 queries, same harness as memex and local-memory-mcp.
->
-> Results (MRR / Recall@5):
-> • Battery: **0.609 / 0.790**
-> • memex: 0.512 / 0.635
-> • local-memory-mcp: 0.457 / 0.600
->
-> No cloud APIs. Single SQLite file. Git-committable BATTERY.md mirror.
->
-> Open source (MIT): github.com/DTiapan/battery
-> Full reproducible report in the repo.
-
-Adjust tone to your voice. Link the repo and optionally the report path.

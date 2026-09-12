@@ -448,7 +448,7 @@ uv run battery eval --real  # quick retrieval sanity check
 
 | Doc | Contents |
 |-----|----------|
-| [Benchmark results](docs/evals/BENCHMARK_RESULTS.md) | Tier 1 comparative summary + LinkedIn starter + reproduce steps |
+| [Benchmark results](docs/evals/BENCHMARK_RESULTS.md) | Tier 1 comparative summary + reproduce steps |
 | [Comparative setup](docs/evals/COMPARATIVE_SETUP.md) | Install memex, Node, ChromaDB; run Sediment harness |
 | [Comparative spec](docs/evals/COMPARATIVE_EVAL_SPEC.md) | G2 gates, methodology, stop rule |
 | [Improvement scorecard](docs/metrics/IMPROVEMENT_SCORECARD.md) | Baseline → delta → pass/fail for every ship gate |
