@@ -157,9 +157,7 @@ def _evaluate_g2(rows: list[dict]) -> list[str]:
             within_latency = False
             if battery.get("recall_p95") is not None:
                 comp_p95s = [
-                    s["recall_p95"]
-                    for s in competitors
-                    if s.get("recall_p95") is not None
+                    s["recall_p95"] for s in competitors if s.get("recall_p95") is not None
                 ]
                 if comp_p95s and battery["recall_p95"] < min(comp_p95s):
                     within_latency = abs(battery["mrr"] - max_comp_mrr) <= 0.01
@@ -171,7 +169,9 @@ def _evaluate_g2(rows: list[dict]) -> list[str]:
             if within_latency and battery["mrr"] < max_comp_mrr:
                 g2a_note += " (within 0.01 MRR at lower recall p95)"
 
-    lines.append(f"- [{'x' if g2a else ' '}] **G2a:** Battery MRR ≥ max(memex, local-memory-mcp) — {g2a_note}")
+    lines.append(
+        f"- [{'x' if g2a else ' '}] **G2a:** Battery MRR ≥ max(memex, local-memory-mcp) — {g2a_note}"
+    )
 
     # G2b
     g2b = False
@@ -215,7 +215,9 @@ def _evaluate_g2(rows: list[dict]) -> list[str]:
                 f"weakest category: {weakest_cat} MRR {by_cat[weakest_cat]:.3f}; "
                 f"weakest difficulty: {weakest_diff} MRR {by_diff[weakest_diff]:.3f}"
             )
-    lines.append(f"- [{'x' if g2d else ' '}] **G2d:** Losses documented by category/difficulty — {g2d_note}")
+    lines.append(
+        f"- [{'x' if g2d else ' '}] **G2d:** Losses documented by category/difficulty — {g2d_note}"
+    )
 
     lines.append("")
     return lines
@@ -246,7 +248,9 @@ def build_comparative_report(systems: list[str]) -> str:
                 r1=f"{row['r1']:.3f}" if row.get("r1") is not None else "—",
                 ndcg=f"{row['ndcg']:.3f}" if row.get("ndcg") is not None else "—",
                 sp95=f"{row['store_p95'] * 1000:.1f}" if row.get("store_p95") is not None else "—",
-                rp95=f"{row['recall_p95'] * 1000:.1f}" if row.get("recall_p95") is not None else "—",
+                rp95=f"{row['recall_p95'] * 1000:.1f}"
+                if row.get("recall_p95") is not None
+                else "—",
                 stored=str(row.get("stored_count", "—")),
             )
         )

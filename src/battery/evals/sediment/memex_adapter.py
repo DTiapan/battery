@@ -41,7 +41,9 @@ def _parse_memex_recall(text: str) -> list[dict[str, Any]]:
         for key in ("results", "memories", "items"):
             items = payload.get(key)
             if isinstance(items, list):
-                return [_normalize_memex_item(item) for item in items if _normalize_memex_item(item)]
+                return [
+                    _normalize_memex_item(item) for item in items if _normalize_memex_item(item)
+                ]
         if "content" in payload:
             normalized = _normalize_memex_item(payload)
             return [normalized] if normalized else []

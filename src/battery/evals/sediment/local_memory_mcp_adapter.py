@@ -93,7 +93,9 @@ class LocalMemoryMcpAdapter:
                 "category": category,
                 "content": item.content,
                 "project": "sediment-bench",
-                "tags": [item.metadata["category"]] if item.metadata and item.metadata.get("category") else [],
+                "tags": [item.metadata["category"]]
+                if item.metadata and item.metadata.get("category")
+                else [],
                 "memoryType": "semantic",
             },
         )

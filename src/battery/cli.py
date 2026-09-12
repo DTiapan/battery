@@ -408,7 +408,9 @@ def evaluate(
     """
     if comparative:
         if tier != "sediment":
-            console.print(f"[red]Unknown comparative tier: {tier}. Only 'sediment' is implemented.[/red]")
+            console.print(
+                f"[red]Unknown comparative tier: {tier}. Only 'sediment' is implemented.[/red]"
+            )
             raise typer.Exit(code=1)
         from battery.evals.sediment.runner import run_sediment_benchmark
 
