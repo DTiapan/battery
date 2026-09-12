@@ -9,13 +9,13 @@
 
 ## Current focus
 
-**Impact over features** — v0.5.0 ships Sprint C evals + NOW-3 adoption. Next: user interviews (roadmap validation debt).
+**Impact over features** — v0.5.0 shipped. **Next: G2 Tier 1** (Sediment public benchmark vs memex + local-memory-mcp) → report → **stop**.
 
 | Priority | What | Why (impact) |
 |----------|------|--------------|
-| 1 | ~~v0.5.0 release~~ | Sprint C + adaptive RRF + onboard path |
-| 2 | **5 user interviews** | Roadmap confidence debt; validate model-switch / rot pain |
-| 3 | **NEXT-4 session log ingestion** | Optional collector — after adoption proof |
+| 1 | **G2 Tier 1 — Sediment benchmark** | Neutral 1k/200 public dataset — only valid competitor proof ([spec v2](../evals/COMPARATIVE_EVAL_SPEC.md)) |
+| 2 | **G2 Tier 2 — Battery RW** | Supplementary domain proof (92/30 ADR corpus) |
+| 3 | **5 user interviews** | After G2 report — validation debt |
 
 Research paper: **LATER** — gates in [`PRODUCT_ROADMAP.md` §8](../roadmap/PRODUCT_ROADMAP.md). Not a build target until product proof + comparative eval exist.
 
@@ -65,3 +65,4 @@ Research paper: **LATER** — gates in [`PRODUCT_ROADMAP.md` §8](../roadmap/PRO
 3. ~~Handoff scenario eval~~ — `battery eval --handoff` (6/6 pass)
 4. ~~Dedup re-ingest stress~~ — `battery eval --dedup-stress` (97% dup reduction, MRR beats naive)
 5. ~~NOW-3 adoption path~~ — `battery onboard` + `doctor --adoption` resource/recall checks
+6. **G2 comparative** — Tier 1 Sediment run + Tier 2 Battery RW, freeze report, stop

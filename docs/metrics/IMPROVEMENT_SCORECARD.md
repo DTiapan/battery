@@ -19,6 +19,7 @@
 | O2-KR2.2 | JIT verify p95 on rot suite | < 10 ms | — | **0.25 ms** | ✅ |
 | O1-KR1.3 | Handoff scenario eval | all pass | — | **6/6 scenarios** | ✅ |
 | O3-KR3.1 | Onboard adoption doctor (seed + resources + recall) | all core checks pass | — | **mcp_context + mcp_rules + recall_smoke** | ✅ |
+| **G2** | Comparative eval vs memex + local-memory-mcp on **Sediment** (Tier 1) | G2a–G2d pass on 1k/200 public benchmark | — | **spec v2** ([COMPARATIVE_EVAL_SPEC](../evals/COMPARATIVE_EVAL_SPEC.md)) | 🟡 |
 
 ---
 
@@ -33,6 +34,7 @@
 | Stress | `battery eval --stress` | 500 synthetic memories | 30 queries | `src/battery/evals/stress_test_report.md` |
 | Golden | `battery eval` | 15 curated | 15 queries | `src/battery/evals/benchmark_results.md` |
 | RRF tune | `battery eval --tune` | Real-world | 30 | `src/battery/evals/rrf_tuning_report.md` |
+| **Comparative (G2)** | `battery eval --comparative --tier sediment` *(planned)* | Sediment 1k/200 (primary) + Battery RW 92/30 (supplementary) | vs memex, local-memory-mcp, ChromaDB | [spec v2](../evals/COMPARATIVE_EVAL_SPEC.md) → `comparative_benchmark_report.md` |
 
 ---
 
@@ -102,6 +104,7 @@
 | **C (handoff)** | Handoff scenario eval (`battery eval --handoff`) | ✅ |
 | **C (dedup)** | Dedup re-ingest stress (`battery eval --dedup-stress`) | ✅ |
 | **NOW-3** | `battery onboard` + `doctor --adoption` resource/recall checks | ✅ |
+| **G2 comparative** | Spec → run → report → **stop** | 🟡 spec done |
 
 ---
 

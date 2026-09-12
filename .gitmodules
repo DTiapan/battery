@@ -1,0 +1,3 @@
+[submodule "vendor/sediment-benchmark"]
+	path = vendor/sediment-benchmark
+	url = https://github.com/rendro/sediment-benchmark.git

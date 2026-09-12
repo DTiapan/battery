@@ -50,3 +50,8 @@ Thumbs.db
 scratch/
 *.metadata.json
 
+# Comparative eval workspaces (Tier 1 / Tier 2)
+src/battery/evals/.comparative_workspaces/
+vendor/sediment-benchmark/.venv/
+vendor/sediment-benchmark/results/raw/
+

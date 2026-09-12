@@ -365,6 +365,26 @@ def evaluate(
     tune: bool = typer.Option(
         False, "--tune", "-t", help="Run RRF k/weight grid sweep to find optimal parameters"
     ),
+    comparative: bool = typer.Option(
+        False,
+        "--comparative",
+        help="Run Tier 1 comparative eval (Sediment benchmark harness)",
+    ),
+    tier: str = typer.Option(
+        "sediment",
+        "--tier",
+        help="Comparative tier: sediment (Tier 1 public benchmark)",
+    ),
+    systems: str = typer.Option(
+        "battery",
+        "--systems",
+        help="Comma-separated systems for --comparative (battery, battery-bm25, chromadb, ...)",
+    ),
+    phases: str = typer.Option(
+        "retrieval",
+        "--phases",
+        help="Sediment phases for --comparative: retrieval, latency, or all",
+    ),
     markdown: bool = typer.Option(
         True, "--markdown/--no-markdown", help="Generate Markdown evaluation report"
     ),
@@ -379,7 +399,21 @@ def evaluate(
       --dedup-stress  Near-dup re-ingest stress: duplicate reduction + MRR gate
       --stress    500-item scaled stress test measuring throughput and latency under load
       --tune      RRF k/weight grid sweep: empirically find optimal hybrid search parameters
+      --comparative  Tier 1 Sediment benchmark (battery vs competitors on public 1k/200 dataset)
     """
+    if comparative:
+        if tier != "sediment":
+            console.print(f"[red]Unknown comparative tier: {tier}. Only 'sediment' is implemented.[/red]")
+            raise typer.Exit(code=1)
+        from battery.evals.sediment.runner import run_sediment_benchmark
+
+        console.print(
+            "[cyan]Running Tier 1 comparative eval (Sediment benchmark)...[/cyan]\n"
+            f"[dim]Systems: {systems} | Phases: {phases}[/dim]"
+        )
+        run_sediment_benchmark(systems=systems, phases=phases)
+        return
+
     if stress:
         from battery.evals.stress_test import run_stress_benchmark
 
